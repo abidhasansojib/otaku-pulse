@@ -24,6 +24,61 @@ import { createClient } from '../../lib/supabase/client';
 import { AuthModal } from '../../components/auth/AuthModal';
 
 import { formatDetailedWatchTimeFromMinutes } from '../../lib/utils/duration';
+import { getAnimeById } from '../../lib/api/jikanClient';
+
+// Client-side Image Compressor (Compresses raw images to ~35-50KB WebP blobs)
+function compressImage(file: File, maxWidth = 400, maxHeight = 400, quality = 0.82): Promise<Blob> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              resolve(file);
+            }
+          },
+          'image/webp',
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+    };
+    reader.onerror = () => resolve(file);
+  });
+}
 
 export interface WatchlistItem {
   id: string;
@@ -69,6 +124,7 @@ function ProfileContent() {
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [reviewAnimeMap, setReviewAnimeMap] = useState<Record<number, { title: string; poster_url: string }>>({});
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [username, setUsername] = useState('');
@@ -103,6 +159,48 @@ function ProfileContent() {
       fetchUserData();
     }
   }, [user]);
+
+  // Fetch anime details for reviews missing metadata via API
+  useEffect(() => {
+    if (reviews && reviews.length > 0) {
+      reviews.forEach(async (rev) => {
+        if (!rev.anime_title && !reviewAnimeMap[rev.anime_id]) {
+          const matchedWatch = watchlist.find((w) => w.anime_id === rev.anime_id);
+          const matchedFav = favorites.find((f) => f.anime_id === rev.anime_id);
+
+          if (matchedWatch) {
+            setReviewAnimeMap((prev) => ({
+              ...prev,
+              [rev.anime_id]: { title: matchedWatch.title, poster_url: matchedWatch.poster_url },
+            }));
+          } else if (matchedFav) {
+            setReviewAnimeMap((prev) => ({
+              ...prev,
+              [rev.anime_id]: { title: matchedFav.title, poster_url: matchedFav.poster_url },
+            }));
+          } else {
+            try {
+              const anime = await getAnimeById(rev.anime_id);
+              if (anime) {
+                const title = anime.title_english || anime.title || 'Anime';
+                const poster_url =
+                  anime.images?.webp?.large_image_url ||
+                  anime.images?.jpg?.large_image_url ||
+                  '/banner-placeholder.webp';
+
+                setReviewAnimeMap((prev) => ({
+                  ...prev,
+                  [rev.anime_id]: { title, poster_url },
+                }));
+              }
+            } catch (e) {
+              // Silent catch
+            }
+          }
+        }
+      });
+    }
+  }, [reviews, watchlist, favorites]);
 
   const fetchUserData = async () => {
     if (!user) return;
@@ -141,16 +239,18 @@ function ProfileContent() {
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !user) return;
-    const file = e.target.files[0];
-    const fileExt = file.name.split('.').pop();
-    const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+    const originalFile = e.target.files[0];
 
     setUploadingAvatar(true);
     setSaveMessage(null);
 
     try {
-      // Upload to Supabase Storage public 'avatars' bucket
-      const { error: uploadErr } = await supabase.storage.from('avatars').upload(filePath, file, {
+      // Compress image client-side to 400x400 WebP blob (~30-50KB) to save storage quota
+      const compressedBlob = await compressImage(originalFile, 400, 400, 0.82);
+      const filePath = `${user.id}/${Date.now()}.webp`;
+
+      const { error: uploadErr } = await supabase.storage.from('avatars').upload(filePath, compressedBlob, {
+        contentType: 'image/webp',
         upsert: true,
       });
 
@@ -169,7 +269,7 @@ function ProfileContent() {
       if (updateErr) throw updateErr;
 
       await refreshProfile();
-      setSaveMessage('Avatar updated successfully!');
+      setSaveMessage('Avatar compressed & updated successfully!');
     } catch (err: any) {
       setSaveMessage(`Upload failed: ${err.message}`);
     } finally {
@@ -307,27 +407,29 @@ function ProfileContent() {
       {/* Header Profile Card */}
       <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/15 shadow-2xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 z-10 relative">
-          {/* Avatar with Upload Hover Button */}
+          {/* Avatar with Upload Hover Button (Only active during Edit Profile mode) */}
           <div className="relative group shrink-0">
             <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden border-2 border-[#FF2A5F]/50 shadow-xl bg-slate-900">
               <Image src={avatarUrl} alt={profile?.username || 'User'} fill className="object-cover" unoptimized />
             </div>
 
-            <label
-              htmlFor="avatar-upload"
-              className="absolute inset-0 bg-black/60 backdrop-blur-xs rounded-3xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold gap-1"
-            >
-              <Camera className="w-5 h-5 text-[#FF2A5F]" />
-              <span>{uploadingAvatar ? 'Uploading...' : 'Change Avatar'}</span>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                disabled={uploadingAvatar}
-                className="hidden"
-              />
-            </label>
+            {isEditingProfile && (
+              <label
+                htmlFor="avatar-upload"
+                className="absolute inset-0 bg-black/60 backdrop-blur-xs rounded-3xl flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold gap-1"
+              >
+                <Camera className="w-5 h-5 text-[#FF2A5F]" />
+                <span>{uploadingAvatar ? 'Compressing & Uploading...' : 'Change Avatar'}</span>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  disabled={uploadingAvatar}
+                  className="hidden"
+                />
+              </label>
+            )}
           </div>
 
           {/* User Info & Edit Form */}
@@ -726,10 +828,21 @@ function ProfileContent() {
         <div className="space-y-4">
           {reviews.length > 0 ? (
             reviews.map((rev) => {
+              const details = reviewAnimeMap[rev.anime_id];
               const matchedWatchItem = watchlist.find((w) => w.anime_id === rev.anime_id);
               const matchedFavItem = favorites.find((f) => f.anime_id === rev.anime_id);
-              const animeTitle = rev.anime_title || matchedWatchItem?.title || matchedFavItem?.title || `Anime #${rev.anime_id}`;
-              const posterUrl = rev.poster_url || matchedWatchItem?.poster_url || matchedFavItem?.poster_url || '/banner-placeholder.webp';
+              const animeTitle =
+                rev.anime_title ||
+                matchedWatchItem?.title ||
+                matchedFavItem?.title ||
+                details?.title ||
+                `Anime #${rev.anime_id}`;
+              const posterUrl =
+                rev.poster_url ||
+                matchedWatchItem?.poster_url ||
+                matchedFavItem?.poster_url ||
+                details?.poster_url ||
+                '/banner-placeholder.webp';
 
               return (
                 <div
