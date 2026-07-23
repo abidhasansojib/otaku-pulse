@@ -69,41 +69,8 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation Arrows (Top-Right on Mobile, Bottom-Right on Desktop to Prevent Overlapping) */}
-      <div className="absolute top-4 right-4 sm:top-auto sm:bottom-6 sm:right-6 z-30 flex items-center gap-1.5 sm:gap-2">
-        <button
-          onClick={() => setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1))}
-          className="p-2 sm:p-3 rounded-full glass-panel text-white hover:bg-white/20 transition-colors border border-white/10 shadow-lg"
-          aria-label="Previous slide"
-        >
-          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
-
-        {/* Indicators */}
-        <div className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full glass-panel border border-white/10 shadow-lg">
-          {items.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentIndex(idx)}
-              className={`h-1.5 sm:h-2 rounded-full transition-all ${
-                idx === currentIndex ? 'w-4 sm:w-6 bg-[#FF2A5F]' : 'w-1.5 sm:w-2 bg-slate-600'
-              }`}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
-          ))}
-        </div>
-
-        <button
-          onClick={() => setCurrentIndex((prev) => (prev + 1) % items.length)}
-          className="p-2 sm:p-3 rounded-full glass-panel text-white hover:bg-white/20 transition-colors border border-white/10 shadow-lg"
-          aria-label="Next slide"
-        >
-          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
-      </div>
-
-      {/* Content Container */}
-      <div className="relative z-10 h-full max-w-4xl px-5 sm:px-8 md:px-12 flex flex-col justify-end pb-6 sm:pb-10 md:pb-14 space-y-3 sm:space-y-4">
+      {/* Content Container (Sufficient Bottom Padding to Avoid Control Overlap) */}
+      <div className="relative z-10 h-full max-w-4xl px-5 sm:px-8 md:px-12 flex flex-col justify-end pb-16 sm:pb-14 md:pb-16 space-y-3 sm:space-y-4">
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="cyber" size="md">
@@ -117,7 +84,7 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
         </div>
 
         {/* Title */}
-        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tight leading-tight line-clamp-2 drop-shadow-md pr-4 sm:pr-0">
+        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tight leading-tight line-clamp-2 drop-shadow-md">
           {title}
         </h1>
 
@@ -140,7 +107,7 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
         )}
 
         {/* CTAs */}
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 pt-2">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 pt-1">
           {trailerUrl && (
             <button
               onClick={() => onPlayTrailer(trailerUrl, title)}
@@ -157,6 +124,39 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
             <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8A2BE2]" /> Explore Details
           </Link>
         </div>
+      </div>
+
+      {/* Navigation Arrows (Bottom-Middle on Mobile, Bottom-Right on Desktop with Zero Overlap) */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-auto md:right-6 md:bottom-5 z-30 flex items-center gap-1.5 sm:gap-2">
+        <button
+          onClick={() => setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1))}
+          className="p-2 sm:p-2.5 rounded-full glass-panel text-white hover:bg-white/20 transition-colors border border-white/15 shadow-lg"
+          aria-label="Previous slide"
+        >
+          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+
+        {/* Indicators */}
+        <div className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full glass-panel border border-white/15 shadow-lg">
+          {items.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              className={`h-1.5 sm:h-2 rounded-full transition-all ${
+                idx === currentIndex ? 'w-4 sm:w-6 bg-[#FF2A5F]' : 'w-1.5 sm:w-2 bg-slate-600'
+              }`}
+              aria-label={`Go to slide ${idx + 1}`}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={() => setCurrentIndex((prev) => (prev + 1) % items.length)}
+          className="p-2 sm:p-2.5 rounded-full glass-panel text-white hover:bg-white/20 transition-colors border border-white/15 shadow-lg"
+          aria-label="Next slide"
+        >
+          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
       </div>
     </div>
   );
