@@ -909,21 +909,22 @@ function ProfileContent() {
                   </div>
 
                   {/* Review Content */}
-                  <div className="flex-1 min-w-0 space-y-2 w-full">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div>
+                  <div className="flex-1 min-w-0 space-y-2 w-full overflow-hidden">
+                    <div className="flex items-start justify-between gap-2 flex-wrap min-w-0 w-full">
+                      <div className="min-w-0 flex-1 overflow-hidden">
                         <Link
                           href={`/anime/${rev.anime_id}`}
-                          className="text-sm font-black text-white hover:text-[#FF2A5F] transition-colors truncate block"
+                          className="text-sm font-black text-white hover:text-[#FF2A5F] transition-colors line-clamp-2 break-words block"
+                          title={animeTitle}
                         >
                           {animeTitle}
                         </Link>
-                        <span className="text-[10px] text-slate-400 font-medium">
+                        <span className="text-[10px] text-slate-400 font-medium block">
                           Reviewed on {new Date(rev.created_at).toLocaleDateString()}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         <div className="flex items-center gap-1 bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white px-3 py-1 rounded-xl font-black text-xs shadow-md">
                           <Star className="w-3.5 h-3.5 fill-white" />
                           <span>{rev.rating} / 10</span>
@@ -990,7 +991,7 @@ function ProfileContent() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/70 p-3 rounded-2xl border border-white/5">
+                      <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/70 p-3 rounded-2xl border border-white/5 break-words">
                         &quot;{rev.review_text}&quot;
                       </p>
                     )}

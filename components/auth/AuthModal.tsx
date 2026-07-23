@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, Mail, Lock, User as UserIcon, X, LogIn, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { Sparkles, Mail, Lock, User as UserIcon, X, LogIn, Eye, EyeOff, KeyRound, ShieldCheck } from 'lucide-react';
 import { createClient } from '../../lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
@@ -23,6 +23,10 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
   // Forgot Password Reset state
   const [isResetView, setIsResetView] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [otpMode, setOtpMode] = useState(false);
+  const [otpToken, setOtpToken] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -50,7 +54,28 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          if (
+            error.message?.toLowerCase().includes('rate limit') ||
+            (error as any).code === 'over_email_send_rate_limit'
+          ) {
+            const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+
+            if (!loginErr && loginData?.user) {
+              onClose();
+              router.push('/profile');
+              return;
+            } else {
+              setErrorMsg('Email rate limit reached for confirmation emails. Please sign in directly.');
+              return;
+            }
+          }
+          throw error;
+        }
+
         if (data?.user) {
           onClose();
           router.push('/profile');
@@ -83,20 +108,66 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
     try {
       const redirectUrl =
         typeof window !== 'undefined'
-          ? `${window.location.origin}/auth/reset-password`
-          : 'https://otaku-pulse.vercel.app/auth/reset-password';
+          ? `${window.location.origin}/auth/callback?next=/auth/reset-password`
+          : 'https://otaku-pulse.vercel.app/auth/callback?next=/auth/reset-password';
 
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: redirectUrl,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (
+          error.message?.toLowerCase().includes('rate limit') ||
+          (error as any).code === 'over_email_send_rate_limit'
+        ) {
+          setResetError(
+            'Email send limit reached for default mailer. If you received a code/link previously, enter your 6-digit OTP code below to reset.'
+          );
+          setOtpMode(true);
+          return;
+        }
+        throw error;
+      }
 
       setResetMessage(
         'Password reset link sent! Check your email inbox to update your password.'
       );
     } catch (err: any) {
       setResetError(err?.message || 'Failed to send reset link.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleVerifyOtpReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError(null);
+    setResetMessage(null);
+    setResetLoading(true);
+
+    try {
+      const { data, error: otpErr } = await supabase.auth.verifyOtp({
+        email: resetEmail,
+        token: otpToken.trim(),
+        type: 'recovery',
+      });
+
+      if (otpErr) throw otpErr;
+
+      const { error: updateErr } = await supabase.auth.updateUser({
+        password: resetNewPassword,
+      });
+
+      if (updateErr) throw updateErr;
+
+      setResetMessage('Password updated successfully! Redirecting...');
+      setTimeout(() => {
+        setIsResetView(false);
+        onClose();
+        router.push('/profile');
+      }, 1500);
+    } catch (err: any) {
+      setResetError(err?.message || 'Invalid or expired OTP security code.');
     } finally {
       setResetLoading(false);
     }
@@ -123,7 +194,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
                 <KeyRound className="w-6 h-6 text-[#FF2A5F]" />
               </div>
               <h2 className="text-2xl font-black text-white tracking-tight">Reset Password</h2>
-              <p className="text-xs text-slate-400">Receive a password reset email link</p>
+              <p className="text-xs text-slate-400">Request link or verify OTP security code</p>
             </div>
 
             {resetMessage ? (
@@ -134,9 +205,93 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
                   onClick={() => setIsResetView(false)}
                   className="w-full py-2 rounded-xl bg-slate-800 text-white font-bold text-xs"
                 >
-                  Back to Sign In
+                  Done
                 </button>
               </div>
+            ) : otpMode ? (
+              <form onSubmit={handleVerifyOtpReset} className="space-y-4">
+                {resetError && (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold text-center">
+                    {resetError}
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">Account Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">OTP Security Code / Token</label>
+                  <div className="relative">
+                    <ShieldCheck className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      required
+                      value={otpToken}
+                      onChange={(e) => setOtpToken(e.target.value)}
+                      placeholder="e.g. 123456"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-white text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">New Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                    <input
+                      type={showResetPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      value={resetNewPassword}
+                      onChange={(e) => setResetNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-white text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword(!showResetPassword)}
+                      className="absolute right-3.5 top-3 text-slate-400 hover:text-white"
+                    >
+                      {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setOtpMode(false)}
+                    className="text-xs text-slate-400 hover:text-white underline"
+                  >
+                    Email Link mode
+                  </button>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsResetView(false)}
+                      className="px-3 py-2 rounded-xl glass-panel text-slate-300 text-xs font-bold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={resetLoading}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-bold text-xs shadow-md disabled:opacity-50"
+                    >
+                      {resetLoading ? 'Verifying...' : 'Reset Password'}
+                    </button>
+                  </div>
+                </div>
+              </form>
             ) : (
               <form onSubmit={handleSendResetLink} className="space-y-4">
                 {resetError && (
@@ -160,21 +315,31 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex items-center justify-between pt-2">
                   <button
                     type="button"
-                    onClick={() => setIsResetView(false)}
-                    className="px-4 py-2 rounded-xl glass-panel text-slate-300 text-xs font-bold"
+                    onClick={() => setOtpMode(true)}
+                    className="text-[11px] text-[#FF2A5F] font-bold hover:underline"
                   >
-                    Cancel
+                    Have an OTP Code?
                   </button>
-                  <button
-                    type="submit"
-                    disabled={resetLoading}
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-bold text-xs shadow-lg shadow-[#FF2A5F]/20 disabled:opacity-50"
-                  >
-                    {resetLoading ? 'Sending Link...' : 'Send Reset Link'}
-                  </button>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsResetView(false)}
+                      className="px-3 py-2 rounded-xl glass-panel text-slate-300 text-xs font-bold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={resetLoading}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-bold text-xs shadow-lg shadow-[#FF2A5F]/20 disabled:opacity-50"
+                    >
+                      {resetLoading ? 'Sending Link...' : 'Send Reset Link'}
+                    </button>
+                  </div>
                 </div>
               </form>
             )}
