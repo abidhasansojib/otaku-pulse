@@ -475,8 +475,11 @@ function ProfileContent() {
                   <div>
                     <h1 className="text-2xl font-black text-white tracking-tight flex items-center justify-center sm:justify-start gap-2">
                       <span>{profile?.username || user.email?.split('@')[0]}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FF2A5F]/20 text-[#FF2A5F] border border-[#FF2A5F]/30 font-bold">
-                        OTAKU
+                      <span
+                        className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#FF2A5F] to-[#8A2BE2] flex items-center justify-center text-white shadow-md shadow-[#FF2A5F]/40 shrink-0"
+                        title="Verified Member"
+                      >
+                        <Check className="w-3 h-3 stroke-[3]" />
                       </span>
                     </h1>
                     <p className="text-xs text-slate-400">{user.email}</p>
@@ -507,7 +510,7 @@ function ProfileContent() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="e.g. Abid Hasan"
+                    placeholder="Enter your full name"
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs"
                   />
                 </div>
