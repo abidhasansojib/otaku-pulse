@@ -178,7 +178,7 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading: ini
 
   return (
     <div ref={containerRef} className="w-full space-y-6 scroll-mt-24">
-      {/* Header & Controls Panel */}
+      {/* Header & Category Tabs Panel */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 glass-panel p-4 rounded-2xl border border-white/10 shadow-xl">
         {/* Tab Buttons */}
         <div className="flex items-center gap-1.5 p-1.5 bg-slate-900/80 rounded-xl border border-white/5 w-full lg:w-auto overflow-x-auto">
@@ -236,6 +236,65 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading: ini
             <LayoutGrid className="w-4 h-4" />
           </button>
         </div>
+      </div>
+
+      {/* Top Navigation & Mode Bar (Located at the TOP of the List) */}
+      <div className="glass-panel p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+        {/* Rank Range Summary */}
+        <div className="text-xs text-slate-400 text-center sm:text-left font-medium">
+          Showing Ranks <strong className="text-white">#{startRank}</strong> –{' '}
+          <strong className="text-white">#{actualEndRank}</strong> ({pageSize} per page)
+        </div>
+
+        {/* Dynamic Page Slide Navigation (Unlimited Pages) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
+          {/* Previous Page Button */}
+          <button
+            onClick={() => handlePageChange(activePage - 1)}
+            disabled={activePage === 1}
+            className="p-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white hover:bg-[#FF2A5F] disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1 text-xs font-bold shrink-0"
+            aria-label="Previous Page"
+            title="Previous Page"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Prev</span>
+          </button>
+
+          {/* Page Pills */}
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {renderPagePills()}
+          </div>
+
+          {/* Next Page Button (Unlimited) */}
+          <button
+            onClick={() => handlePageChange(activePage + 1)}
+            className="p-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white hover:bg-[#FF2A5F] transition-all flex items-center gap-1 text-xs font-bold shrink-0"
+            aria-label="Next Page"
+            title="Next Page"
+          >
+            <span>Next</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Toggle Mode Button: Show 100 in a page vs Show 15 in a page */}
+        {pageSize === 15 ? (
+          <button
+            onClick={() => togglePageSize(100)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white text-xs font-bold transition-all hover:scale-105 shadow-md flex items-center gap-1.5 whitespace-nowrap shrink-0"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            Show 100 in a page
+          </button>
+        ) : (
+          <button
+            onClick={() => togglePageSize(15)}
+            className="px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 text-slate-200 hover:text-white text-xs font-bold transition-all hover:scale-105 shadow-md flex items-center gap-1.5 whitespace-nowrap shrink-0"
+          >
+            <Layers className="w-3.5 h-3.5 text-[#FF2A5F]" />
+            Show 15 in a page
+          </button>
+        )}
       </div>
 
       {/* Table / Grid Content */}
@@ -403,65 +462,6 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading: ini
           )}
         </motion.div>
       </AnimatePresence>
-
-      {/* Page Navigation & Display Mode Bar */}
-      <div className="glass-panel p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-        {/* Rank Range Summary */}
-        <div className="text-xs text-slate-400 text-center sm:text-left font-medium">
-          Showing Ranks <strong className="text-white">#{startRank}</strong> –{' '}
-          <strong className="text-white">#{actualEndRank}</strong> ({pageSize} per page)
-        </div>
-
-        {/* Dynamic Page Slide Navigation (Unlimited Pages) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
-          {/* Previous Page Button */}
-          <button
-            onClick={() => handlePageChange(activePage - 1)}
-            disabled={activePage === 1}
-            className="p-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white hover:bg-[#FF2A5F] disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1 text-xs font-bold shrink-0"
-            aria-label="Previous Page"
-            title="Previous Page"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Prev</span>
-          </button>
-
-          {/* Page Pills */}
-          <div className="flex items-center gap-1 overflow-x-auto">
-            {renderPagePills()}
-          </div>
-
-          {/* Next Page Button (Unlimited) */}
-          <button
-            onClick={() => handlePageChange(activePage + 1)}
-            className="p-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white hover:bg-[#FF2A5F] transition-all flex items-center gap-1 text-xs font-bold shrink-0"
-            aria-label="Next Page"
-            title="Next Page"
-          >
-            <span>Next</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Toggle Mode Button: Show 100 in a page vs Show 15 in a page */}
-        {pageSize === 15 ? (
-          <button
-            onClick={() => togglePageSize(100)}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white text-xs font-bold transition-all hover:scale-105 shadow-md flex items-center gap-1.5 whitespace-nowrap shrink-0"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            Show 100 in a page
-          </button>
-        ) : (
-          <button
-            onClick={() => togglePageSize(15)}
-            className="px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 text-slate-200 hover:text-white text-xs font-bold transition-all hover:scale-105 shadow-md flex items-center gap-1.5 whitespace-nowrap shrink-0"
-          >
-            <Layers className="w-3.5 h-3.5 text-[#FF2A5F]" />
-            Show 15 in a page
-          </button>
-        )}
-      </div>
     </div>
   );
 }
