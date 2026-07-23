@@ -18,6 +18,12 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
   const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
+    if (items && items.length > 0) {
+      setCurrentIndex(Math.floor(Math.random() * items.length));
+    }
+  }, [items]);
+
+  useEffect(() => {
     if (items.length <= 1 || isPaused) return;
 
     const timer = setInterval(() => {

@@ -51,6 +51,8 @@ export interface ReviewItem {
   id: string;
   user_id: string;
   anime_id: number;
+  anime_title?: string;
+  poster_url?: string;
   rating: number;
   review_text: string;
   created_at: string;
@@ -723,83 +725,118 @@ function ProfileContent() {
       {activeTab === 'reviews' && (
         <div className="space-y-4">
           {reviews.length > 0 ? (
-            reviews.map((rev) => (
-              <div key={rev.id} className="glass-panel p-5 rounded-2xl border border-white/10 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 bg-[#FF2A5F] text-white px-2.5 py-0.5 rounded-lg font-bold text-xs">
-                      <Star className="w-3.5 h-3.5 fill-white" />
-                      <span>{rev.rating}/10</span>
-                    </div>
-                    <span className="text-xs text-slate-400 font-semibold">
-                      Anime ID #{rev.anime_id}
-                    </span>
+            reviews.map((rev) => {
+              const matchedWatchItem = watchlist.find((w) => w.anime_id === rev.anime_id);
+              const matchedFavItem = favorites.find((f) => f.anime_id === rev.anime_id);
+              const animeTitle = rev.anime_title || matchedWatchItem?.title || matchedFavItem?.title || `Anime #${rev.anime_id}`;
+              const posterUrl = rev.poster_url || matchedWatchItem?.poster_url || matchedFavItem?.poster_url || '/banner-placeholder.webp';
+
+              return (
+                <div
+                  key={rev.id}
+                  className="glass-panel p-5 rounded-3xl border border-white/10 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:border-[#FF2A5F]/30 transition-all shadow-xl"
+                >
+                  {/* Poster Banner */}
+                  <div className="relative w-20 aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 shrink-0 shadow-md">
+                    <Image
+                      src={posterUrl}
+                      alt={animeTitle}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingReviewId(rev.id);
-                        setEditReviewText(rev.review_text);
-                        setEditReviewRating(rev.rating);
-                      }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteReview(rev.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  {/* Review Content */}
+                  <div className="flex-1 min-w-0 space-y-2 w-full">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div>
+                        <Link
+                          href={`/anime/${rev.anime_id}`}
+                          className="text-sm font-black text-white hover:text-[#FF2A5F] transition-colors truncate block"
+                        >
+                          {animeTitle}
+                        </Link>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          Reviewed on {new Date(rev.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white px-3 py-1 rounded-xl font-black text-xs shadow-md">
+                          <Star className="w-3.5 h-3.5 fill-white" />
+                          <span>{rev.rating} / 10</span>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setEditingReviewId(rev.id);
+                            setEditReviewText(rev.review_text);
+                            setEditReviewRating(rev.rating);
+                          }}
+                          className="p-1.5 rounded-xl bg-slate-900 border border-white/10 text-slate-400 hover:text-white transition-all"
+                          title="Edit Review"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteReview(rev.id)}
+                          className="p-1.5 rounded-xl bg-slate-900 border border-white/10 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                          title="Delete Review"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {editingReviewId === rev.id ? (
+                      <div className="space-y-3 pt-2 bg-slate-950/80 p-3 rounded-2xl border border-white/10">
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-semibold text-slate-300">Rating:</label>
+                          <select
+                            value={editReviewRating}
+                            onChange={(e) => setEditReviewRating(parseInt(e.target.value, 10))}
+                            className="px-2 py-1 rounded-lg bg-slate-900 border border-white/10 text-xs text-white"
+                          >
+                            {Array.from({ length: 10 }).map((_, i) => (
+                              <option key={i + 1} value={i + 1}>
+                                {i + 1} Stars
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <textarea
+                          rows={3}
+                          value={editReviewText}
+                          onChange={(e) => setEditReviewText(e.target.value)}
+                          className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 text-xs text-white"
+                        />
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleUpdateReview(rev.id)}
+                            className="px-3 py-1.5 rounded-xl bg-[#FF2A5F] text-white font-bold text-xs"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingReviewId(null)}
+                            className="px-3 py-1.5 rounded-xl glass-panel text-slate-400 text-xs"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/70 p-3 rounded-2xl border border-white/5">
+                        &quot;{rev.review_text}&quot;
+                      </p>
+                    )}
                   </div>
                 </div>
-
-                {editingReviewId === rev.id ? (
-                  <div className="space-y-3 pt-2">
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-slate-300">Rating:</label>
-                      <select
-                        value={editReviewRating}
-                        onChange={(e) => setEditReviewRating(parseInt(e.target.value, 10))}
-                        className="px-2 py-1 rounded-lg bg-slate-900 border border-white/10 text-xs text-white"
-                      >
-                        {Array.from({ length: 10 }).map((_, i) => (
-                          <option key={i + 1} value={i + 1}>
-                            {i + 1} Stars
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <textarea
-                      rows={3}
-                      value={editReviewText}
-                      onChange={(e) => setEditReviewText(e.target.value)}
-                      className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 text-xs text-white"
-                    />
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleUpdateReview(rev.id)}
-                        className="px-3 py-1.5 rounded-xl bg-[#FF2A5F] text-white font-bold text-xs"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingReviewId(null)}
-                        className="px-3 py-1.5 rounded-xl glass-panel text-slate-400 text-xs"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-300 leading-relaxed">{rev.review_text}</p>
-                )}
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="glass-panel p-12 rounded-3xl border border-white/10 text-center text-slate-400 space-y-3">
               <MessageSquare className="w-8 h-8 text-[#FF2A5F] mx-auto" />

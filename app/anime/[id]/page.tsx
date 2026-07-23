@@ -648,7 +648,15 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
           <HDArtworkGallery anime={anime} />
 
           {/* Community Reviews Section */}
-          <AnimeReviews animeId={numericAnimeId} />
+          <AnimeReviews
+            animeId={numericAnimeId}
+            animeTitle={anime?.title_english || anime?.title || title}
+            posterUrl={
+              anime?.images?.webp?.large_image_url ||
+              anime?.images?.jpg?.large_image_url ||
+              '/banner-placeholder.webp'
+            }
+          />
 
           {/* Recommendations */}
           <AnimeRecommendations animeId={numericAnimeId} />

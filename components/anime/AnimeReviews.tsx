@@ -41,7 +41,15 @@ async function fetchJikanReviews(animeId: number): Promise<ReviewItem[]> {
   return [];
 }
 
-export function AnimeReviews({ animeId }: { animeId: number }) {
+export function AnimeReviews({
+  animeId,
+  animeTitle,
+  posterUrl,
+}: {
+  animeId: number;
+  animeTitle?: string;
+  posterUrl?: string;
+}) {
   const { user, profile } = useAuth();
   const supabase = createClient();
 
@@ -104,6 +112,8 @@ export function AnimeReviews({ animeId }: { animeId: number }) {
       const { error } = await supabase.from('reviews').insert({
         user_id: user.id,
         anime_id: animeId,
+        anime_title: animeTitle || 'Anime',
+        poster_url: posterUrl || '/banner-placeholder.webp',
         rating,
         review_text: reviewText.trim(),
       });

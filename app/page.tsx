@@ -15,10 +15,11 @@ import { Flame, Trophy, Compass, Sparkles } from 'lucide-react';
 export default function HomePage() {
   const [activeTrailer, setActiveTrailer] = useState<{ url: string; title: string } | null>(null);
 
-  // Fetch Hero Featured Anime
+  // Fetch Hero Featured Anime (Randomized on refresh)
   const { data: heroItems, isLoading: isHeroLoading } = useQuery({
     queryKey: ['heroAnime'],
     queryFn: getHeroFeaturedAnime,
+    staleTime: 0,
   });
 
   // Fetch Top Rated

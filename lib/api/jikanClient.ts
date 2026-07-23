@@ -235,23 +235,25 @@ export async function getCurrentSeasonAnime(limit = 20, page = 1): Promise<Jikan
   return getSeasonalAnime(undefined, undefined, page, limit);
 }
 
-// Fetch Hero Featured Anime
+// Fetch Hero Featured Anime (Randomized top recommendations on every page refresh)
 export async function getHeroFeaturedAnime(): Promise<AnimeItem[]> {
   try {
-    const aniListResults = await getTopAnimeAniList('TRENDING_DESC', 7);
-    if (aniListResults && aniListResults.length > 0) {
-      return deduplicateAnimeList(aniListResults);
+    const pool = await getTopAnimeAniList('TRENDING_DESC', 30);
+    if (pool && pool.length > 0) {
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      return deduplicateAnimeList(shuffled.slice(0, 7));
     }
   } catch (e) {
     // Fallback to Jikan
   }
 
   try {
-    const res = await getCurrentSeasonAnime(10);
+    const res = await getCurrentSeasonAnime(25);
     const animeList = deduplicateAnimeList(res.data || []);
+    const shuffled = [...animeList].sort(() => Math.random() - 0.5);
 
     const enhanced = await Promise.all(
-      animeList.slice(0, 7).map(async (anime) => {
+      shuffled.slice(0, 7).map(async (anime) => {
         let banner = anime.banner_url || 
                      anime.trailer?.images?.maximum_image_url || 
                      anime.trailer?.images?.large_image_url ||
