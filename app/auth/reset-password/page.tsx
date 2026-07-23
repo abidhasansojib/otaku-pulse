@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Sparkles, Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Sparkles, Lock, Eye, EyeOff, CheckCircle2, ShieldCheck, Mail } from 'lucide-react';
 import { createClient } from '../../../lib/supabase/client';
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
+  const [email, setEmail] = useState('');
+  const [otpToken, setOtpToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -17,54 +19,121 @@ export default function ResetPasswordPage() {
   const [hasSession, setHasSession] = useState(false);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   useEffect(() => {
-    // 1. Check existing active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setHasSession(true);
-      }
-      setSessionChecking(false);
-    });
+    let mounted = true;
 
-    // 2. Listen for recovery auth state changes
+    async function initAuthSession() {
+      try {
+        // 1. Check if PKCE code is in URL query (?code=...)
+        const code = searchParams.get('code');
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (!error && data.session && mounted) {
+            setHasSession(true);
+            setSessionChecking(false);
+            return;
+          }
+        }
+
+        // 2. Check if access_token is in URL hash (#access_token=...)
+        if (typeof window !== 'undefined' && window.location.hash) {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+
+          if (accessToken && refreshToken) {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (!error && data.session && mounted) {
+              setHasSession(true);
+              setSessionChecking(false);
+              return;
+            }
+          }
+        }
+
+        // 3. Check existing active session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && mounted) {
+          setHasSession(true);
+        }
+      } catch (err) {
+        console.error('Session init error:', err);
+      } finally {
+        if (mounted) setSessionChecking(false);
+      }
+    }
+
+    initAuthSession();
+
+    // 4. Listen for recovery auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || session) {
-        setHasSession(true);
+        if (mounted) setHasSession(true);
       }
-      setSessionChecking(false);
+      if (mounted) setSessionChecking(false);
     });
 
     return () => {
+      mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase, searchParams]);
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
+  // Handle password update for users with an active session (from link click)
+  const handleUpdatePasswordWithSession = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
     setLoading(true);
 
     try {
-      // Re-verify active session before updating
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session && !hasSession) {
-        throw new Error(
-          'Password reset token has expired or is invalid. Please request a new password reset link from the login page.'
-        );
-      }
-
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
-      setSuccessMsg('Your password has been updated successfully! Redirecting to your profile...');
+      setSuccessMsg('Your password has been updated successfully! Redirecting to profile...');
       setTimeout(() => {
         router.push('/profile');
       }, 2000);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to update password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle password reset via OTP Security Code (if no session or direct entry)
+  const handleResetWithOtpCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setLoading(true);
+
+    try {
+      // 1. Verify OTP token
+      const { error: otpErr } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: otpToken.trim(),
+        type: 'recovery',
+      });
+
+      if (otpErr) throw otpErr;
+
+      // 2. Update password
+      const { error: updateErr } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateErr) throw updateErr;
+
+      setSuccessMsg('Your password has been updated successfully! Redirecting to profile...');
+      setTimeout(() => {
+        router.push('/profile');
+      }, 2000);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Invalid or expired OTP code. Please check your email.');
     } finally {
       setLoading(false);
     }
@@ -78,28 +147,12 @@ export default function ResetPasswordPage() {
             <Sparkles className="w-6 h-6 text-white animate-pulse" />
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">Set New Password</h1>
-          <p className="text-xs text-slate-400">Enter a new secure password for your OtakuPulse account</p>
+          <p className="text-xs text-slate-400">Enter your new password to secure your OtakuPulse account</p>
         </div>
 
         {sessionChecking ? (
-          <div className="text-center py-6 text-xs text-slate-400">
+          <div className="text-center py-6 text-xs text-slate-400 animate-pulse">
             Verifying your password reset authorization...
-          </div>
-        ) : !hasSession ? (
-          <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold text-center space-y-4">
-            <div className="flex items-center justify-center gap-2">
-              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
-              <span>Password reset link has expired or is missing authorization.</span>
-            </div>
-            <p className="text-[11px] text-slate-300 font-normal">
-              Please click &quot;Forgot Password?&quot; on the login page to send a new reset link to your email.
-            </p>
-            <Link
-              href="/auth/login"
-              className="inline-block w-full py-2.5 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-bold text-xs shadow-md"
-            >
-              Go to Login Page
-            </Link>
           </div>
         ) : (
           <>
@@ -116,39 +169,118 @@ export default function ResetPasswordPage() {
               </div>
             )}
 
-            <form onSubmit={handleUpdatePassword} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">New Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-white text-xs focus:outline-none focus:border-[#FF2A5F]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3 text-slate-400 hover:text-white transition-colors"
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+            {hasSession ? (
+              /* User has active recovery session from email link */
+              <form onSubmit={handleUpdatePasswordWithSession} className="space-y-4">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold text-center">
+                  ✓ Reset Link Authorized! Enter your new password below.
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-bold text-xs shadow-lg shadow-[#FF2A5F]/20 hover:scale-102 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <span>{loading ? 'Updating Password...' : 'Save New Password'}</span>
-              </button>
-            </form>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">New Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-white text-xs focus:outline-none focus:border-[#FF2A5F]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-3 text-slate-400 hover:text-white transition-colors"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-bold text-xs shadow-lg shadow-[#FF2A5F]/20 hover:scale-102 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <span>{loading ? 'Saving Password...' : 'Save New Password'}</span>
+                </button>
+              </form>
+            ) : (
+              /* User does not have session yet, or is entering OTP code directly */
+              <form onSubmit={handleResetWithOtpCode} className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-slate-900 border border-white/10 text-slate-300 text-xs space-y-1 text-center">
+                  <p className="font-bold text-white">Reset via OTP Code or Email</p>
+                  <p className="text-[11px] text-slate-400">
+                    Enter your account email, 6-digit OTP code (from email), and your new password.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">Account Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-white text-xs focus:outline-none focus:border-[#FF2A5F]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">OTP Code / Security Token</label>
+                  <div className="relative">
+                    <ShieldCheck className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      required
+                      value={otpToken}
+                      onChange={(e) => setOtpToken(e.target.value)}
+                      placeholder="e.g. 123456"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-[#FF2A5F]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">New Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-white text-xs focus:outline-none focus:border-[#FF2A5F]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-3 text-slate-400 hover:text-white transition-colors"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-bold text-xs shadow-lg shadow-[#FF2A5F]/20 hover:scale-102 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <span>{loading ? 'Verifying & Saving...' : 'Verify OTP & Set Password'}</span>
+                </button>
+              </form>
+            )}
           </>
         )}
 
@@ -160,5 +292,13 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-10 text-slate-400">Loading Password Reset...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
