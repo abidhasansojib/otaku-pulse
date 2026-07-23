@@ -77,7 +77,7 @@ export default function SignUpPage() {
 
         <form onSubmit={handleSignUp} className="space-y-4">
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-300">Username</label>
+            <label className="text-xs font-semibold text-slate-300">Full Name</label>
             <div className="relative">
               <UserIcon className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
               <input
@@ -85,7 +85,7 @@ export default function SignUpPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. otaku_king"
+                placeholder="e.g. Abid Hasan"
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-white text-xs focus:outline-none focus:border-[#FF2A5F]"
               />
             </div>

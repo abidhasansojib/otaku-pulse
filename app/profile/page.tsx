@@ -26,8 +26,8 @@ import { AuthModal } from '../../components/auth/AuthModal';
 import { formatDetailedWatchTimeFromMinutes } from '../../lib/utils/duration';
 import { getAnimeById } from '../../lib/api/jikanClient';
 
-// Client-side Image Compressor (Compresses raw images to ~35-50KB WebP blobs)
-function compressImage(file: File, maxWidth = 400, maxHeight = 400, quality = 0.82): Promise<Blob> {
+// Client-side Image Compressor (Compresses raw images to ~15-25KB WebP blobs)
+function compressImage(file: File, maxWidth = 250, maxHeight = 250, quality = 0.75): Promise<Blob> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -135,6 +135,41 @@ function ProfileContent() {
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [editReviewText, setEditReviewText] = useState('');
   const [editReviewRating, setEditReviewRating] = useState(10);
+
+  // Delete Account State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleConfirmDeleteAccount = async () => {
+    if (deleteConfirmationText.trim() !== 'deletemyaccount') {
+      setDeleteError('Confirmation phrase does not match. Please type deletemyaccount');
+      return;
+    }
+
+    if (!user) return;
+    setIsDeletingAccount(true);
+    setDeleteError(null);
+
+    try {
+      // 1. Delete user data from database tables
+      await supabase.from('watchlist').delete().eq('user_id', user.id);
+      await supabase.from('favorites').delete().eq('user_id', user.id);
+      await supabase.from('reviews').delete().eq('user_id', user.id);
+      await supabase.from('profiles').delete().eq('id', user.id);
+
+      // 2. Sign out user
+      await supabase.auth.signOut();
+
+      // 3. Close modal & redirect to homepage
+      setIsDeleteModalOpen(false);
+      window.location.href = '/';
+    } catch (err: any) {
+      setDeleteError(`Failed to delete account: ${err.message}`);
+      setIsDeletingAccount(false);
+    }
+  };
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -245,8 +280,8 @@ function ProfileContent() {
     setSaveMessage(null);
 
     try {
-      // Compress image client-side to 400x400 WebP blob (~30-50KB) to save storage quota
-      const compressedBlob = await compressImage(originalFile, 400, 400, 0.82);
+      // Compress image client-side to 250x250 WebP blob (~15-25KB) to save storage quota
+      const compressedBlob = await compressImage(originalFile, 250, 250, 0.75);
       const filePath = `${user.id}/${Date.now()}.webp`;
 
       const { error: uploadErr } = await supabase.storage.from('avatars').upload(filePath, compressedBlob, {
@@ -466,12 +501,13 @@ function ProfileContent() {
             ) : (
               <form onSubmit={handleSaveProfile} className="space-y-3 max-w-md pt-1">
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-300">Username</label>
+                  <label className="text-[11px] font-semibold text-slate-300">Full Name (Display Name)</label>
                   <input
                     type="text"
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    placeholder="e.g. Abid Hasan"
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs"
                   />
                 </div>
@@ -484,7 +520,7 @@ function ProfileContent() {
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs"
                   />
                 </div>
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <button
                     type="submit"
                     className="px-4 py-2 rounded-xl bg-[#FF2A5F] text-white font-bold text-xs"
@@ -497,6 +533,15 @@ function ProfileContent() {
                     className="px-4 py-2 rounded-xl glass-panel text-slate-400 text-xs"
                   >
                     Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    className="ml-auto px-3.5 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 font-bold text-xs flex items-center gap-1.5 transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete My Account</span>
                   </button>
                 </div>
               </form>
@@ -847,10 +892,10 @@ function ProfileContent() {
               return (
                 <div
                   key={rev.id}
-                  className="glass-panel p-5 rounded-3xl border border-white/10 flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:border-[#FF2A5F]/30 transition-all shadow-xl"
+                  className="glass-panel p-4 sm:p-5 rounded-3xl border border-white/10 flex flex-row gap-3.5 sm:gap-5 items-start hover:border-[#FF2A5F]/30 transition-all shadow-xl"
                 >
                   {/* Poster Banner */}
-                  <div className="relative w-20 aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 shrink-0 shadow-md">
+                  <div className="relative w-16 sm:w-20 aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 shrink-0 shadow-md">
                     <Image
                       src={posterUrl}
                       alt={animeTitle}
@@ -956,6 +1001,66 @@ function ProfileContent() {
               <p className="text-xs">You haven&apos;t written any reviews yet.</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-red-500/30 max-w-md w-full space-y-5 bg-slate-900/95 shadow-2xl">
+            <div className="flex items-center gap-3 text-red-500">
+              <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center border border-red-500/30 shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Delete Account Permanently?</h3>
+                <p className="text-xs text-slate-400">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed bg-red-500/10 p-3.5 rounded-2xl border border-red-500/20">
+              All your watchlist progress, saved favorites, and reviews will be permanently erased from OtakuPulse.
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300 block">
+                To confirm, type <span className="text-red-400 font-mono font-black select-all">deletemyaccount</span> below:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmationText}
+                onChange={(e) => {
+                  setDeleteConfirmationText(e.target.value);
+                  setDeleteError(null);
+                }}
+                placeholder="deletemyaccount"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-red-500"
+              />
+              {deleteError && <p className="text-[11px] font-bold text-red-400">{deleteError}</p>}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setDeleteConfirmationText('');
+                  setDeleteError(null);
+                }}
+                className="px-4 py-2.5 rounded-xl glass-panel text-slate-300 text-xs font-bold hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteConfirmationText.trim() !== 'deletemyaccount' || isDeletingAccount}
+                onClick={handleConfirmDeleteAccount}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-lg shadow-red-600/30 transition-all disabled:opacity-40 disabled:pointer-events-none"
+              >
+                {isDeletingAccount ? 'Deleting Account...' : 'Confirm Delete Account'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
