@@ -317,12 +317,17 @@ export async function getAnimeById(id: number | string): Promise<AnimeItem | nul
 }
 
 // Search & Multi-Filter Anime (AniList + Jikan Multi-API with robust genre filtering)
+// Search & Multi-Filter Anime (Title & Genre dual-search with Title Priority)
 export async function searchAnime(filters: Partial<AnimeFilterState>, page = 1, limit = 24): Promise<JikanResponse<AnimeItem[]>> {
-  const genreId = filters.genre ? resolveGenreId(filters.genre) : null;
-  const genreName = filters.genre ? resolveGenreName(filters.genre) : null;
+  const queryStr = filters.q ? filters.q.trim() : '';
+  const explicitGenreId = filters.genre ? resolveGenreId(filters.genre) : null;
+  const explicitGenreName = filters.genre ? resolveGenreName(filters.genre) : null;
 
-  // 1. If filtering by genre, try AniList GraphQL first for fast sub-100ms response (bypassing Jikan 504 timeouts)
-  if (genreName) {
+  // Check if query string itself matches a known genre name
+  const queryMatchedGenre = queryStr ? resolveGenreName(queryStr) : null;
+
+  // 1. If explicit genre filter is set, use AniList fast sub-100ms genre search
+  if (explicitGenreName && !queryStr) {
     try {
       const aniListResults = await searchAnimeAniList(filters, page, limit);
       if (aniListResults && aniListResults.length > 0) {
@@ -335,18 +340,19 @@ export async function searchAnime(filters: Partial<AnimeFilterState>, page = 1, 
         };
       }
     } catch (e) {
-      // Proceed to Jikan
+      // Proceed below
     }
   }
 
-  // 2. Try Jikan API search with parameters
+  // 2. Perform Primary Title Search
+  let titleResults: AnimeItem[] = [];
   try {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('limit', limit.toString());
 
-    if (filters.q && filters.q.trim().length > 0) params.append('q', filters.q.trim());
-    if (genreId) params.append('genres', genreId.toString());
+    if (queryStr) params.append('q', queryStr);
+    if (explicitGenreId) params.append('genres', explicitGenreId.toString());
     if (filters.rating && filters.rating !== 'all') params.append('rating', filters.rating);
     if (filters.status && filters.status !== 'all') params.append('status', filters.status);
     if (filters.type && filters.type !== 'all') params.append('type', filters.type);
@@ -355,17 +361,40 @@ export async function searchAnime(filters: Partial<AnimeFilterState>, page = 1, 
 
     const url = `${BASE_URL}/anime?${params.toString()}`;
     const response = await rateLimitedFetch<JikanResponse<AnimeItem[]>>(url);
-    if (response && response.data && Array.isArray(response.data) && response.data.length > 0) {
-      return {
-        ...response,
-        data: deduplicateAnimeList(response.data),
-      };
+    if (response && response.data && Array.isArray(response.data)) {
+      titleResults = response.data;
     }
   } catch (err) {
-    // Fallback below
+    // Proceed to fallback
   }
 
-  // 3. Secondary AniList search fallback
+  // 3. If Query string also matches a genre name, perform secondary Genre search & blend (Title Priority first!)
+  let genreResults: AnimeItem[] = [];
+  if (queryMatchedGenre && queryStr) {
+    try {
+      const aniListGenre = await searchAnimeAniList({ ...filters, genre: queryMatchedGenre, q: undefined }, page, limit);
+      if (aniListGenre && aniListGenre.length > 0) {
+        genreResults = aniListGenre;
+      }
+    } catch (e) {
+      // Proceed
+    }
+  }
+
+  // Combine title results FIRST, followed by genre results (deduplicated)
+  const combined = deduplicateAnimeList([...titleResults, ...genreResults]);
+
+  if (combined.length > 0) {
+    return {
+      data: combined,
+      pagination: {
+        last_visible_page: 5,
+        has_next_page: combined.length >= limit,
+      },
+    };
+  }
+
+  // 4. Secondary AniList fallback search
   try {
     const aniListResults = await searchAnimeAniList(filters, page, limit);
     if (aniListResults && aniListResults.length > 0) {

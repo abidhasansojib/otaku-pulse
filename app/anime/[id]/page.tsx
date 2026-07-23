@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { getAnimeById } from '../../../lib/api/jikanClient';
+import { parseDurationMinutes } from '../../../lib/utils/duration';
 import { HDArtworkGallery } from '../../../components/anime/HDArtworkGallery';
 import { AnimeCharacters } from '../../../components/anime/AnimeCharacters';
 import { AnimeRecommendations } from '../../../components/anime/AnimeRecommendations';
@@ -96,6 +97,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
 
     const title = anime?.title_english || anime?.title || 'Anime';
     const totalEps = anime?.episodes || 0;
+    const durationMinutes = parseDurationMinutes(anime?.duration);
 
     let targetEpisodes = episodesWatched;
     if (newStatus === 'COMPLETED' && totalEps > 0) {
@@ -124,6 +126,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
             status: newStatus,
             episodes_watched: targetEpisodes,
             total_episodes: totalEps,
+            duration_minutes: durationMinutes,
           },
           { onConflict: 'user_id,anime_id' }
         );
@@ -143,6 +146,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
   const handleSetEpisodesWatched = async (count: number) => {
     if (!user) return;
     const totalEps = anime?.episodes || 0;
+    const durationMinutes = parseDurationMinutes(anime?.duration);
 
     // Strict capping logic: cannot exceed total episodes if total episodes is known!
     let targetCount = Math.max(0, count);
@@ -178,6 +182,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
           status: newStatus,
           episodes_watched: targetCount,
           total_episodes: totalEps,
+          duration_minutes: durationMinutes,
         },
         { onConflict: 'user_id,anime_id' }
       );

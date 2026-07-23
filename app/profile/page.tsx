@@ -23,6 +23,8 @@ import { useAuth } from '../../lib/context/AuthContext';
 import { createClient } from '../../lib/supabase/client';
 import { AuthModal } from '../../components/auth/AuthModal';
 
+import { formatDetailedWatchTimeFromMinutes } from '../../lib/utils/duration';
+
 export interface WatchlistItem {
   id: string;
   user_id: string;
@@ -32,6 +34,7 @@ export interface WatchlistItem {
   status: 'WATCHING' | 'COMPLETED' | 'PLAN_TO_WATCH' | 'DROPPED';
   episodes_watched: number;
   total_episodes?: number;
+  duration_minutes?: number;
   created_at: string;
 }
 
@@ -277,20 +280,14 @@ function ProfileContent() {
 
   const avatarUrl = profile?.avatar_url || '/banner-placeholder.webp';
 
-  // Accurate Watch Time Calculation (Standard 23.5 min/ep broadcast runtime)
+  // Per-Anime Episode Duration Watch Time Calculation
   const totalEpisodesWatched = watchlist.reduce((sum, item) => sum + (item.episodes_watched || 0), 0);
-  const totalMinutesWatched = Math.round(totalEpisodesWatched * 23.5);
-  const watchDays = Math.floor(totalMinutesWatched / (24 * 60));
-  const remainingMinsAfterDays = totalMinutesWatched % (24 * 60);
-  const watchHours = Math.floor(remainingMinsAfterDays / 60);
-  const watchMins = remainingMinsAfterDays % 60;
-  const formattedHours = (totalMinutesWatched / 60).toFixed(1);
+  const totalMinutesWatched = watchlist.reduce(
+    (sum, item) => sum + (item.episodes_watched || 0) * (item.duration_minutes || 24),
+    0
+  );
 
-  const formattedWatchTime = watchDays > 0
-    ? `${watchDays}d ${watchHours}h ${watchMins}m`
-    : watchHours > 0
-    ? `${watchHours}h ${watchMins}m`
-    : `${watchMins}m`;
+  const watchStats = formatDetailedWatchTimeFromMinutes(totalMinutesWatched);
 
   const completedCount = watchlist.filter((item) => item.status === 'COMPLETED').length;
   const watchingCount = watchlist.filter((item) => item.status === 'WATCHING').length;
@@ -419,7 +416,7 @@ function ProfileContent() {
 
           <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-950 border border-white/10 text-xs font-extrabold text-[#FF2A5F]">
             <Clock className="w-4 h-4 text-[#FF2A5F]" />
-            <span>Est. Watch Time: <strong className="text-white">{formattedWatchTime}</strong> ({formattedHours} hrs)</span>
+            <span>Est. Watch Time: <strong className="text-white">{watchStats.formatted}</strong> ({watchStats.formattedHours} hrs)</span>
           </div>
         </div>
 
@@ -564,6 +561,7 @@ function ProfileContent() {
               {filteredWatchlist.map((item) => {
                 const maxEps = item.total_episodes || 0;
                 const isMaxReached = maxEps > 0 && item.episodes_watched >= maxEps;
+                const epDuration = item.duration_minutes || 24;
 
                 return (
                   <div
@@ -588,8 +586,13 @@ function ProfileContent() {
                         {item.title}
                       </Link>
 
-                      <div className="inline-block px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-bold text-[#FF2A5F]">
-                        {item.status.replace(/_/g, ' ')}
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-bold text-[#FF2A5F]">
+                          {item.status.replace(/_/g, ' ')}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 text-[9px] font-semibold border border-white/10">
+                          {epDuration}m/ep
+                        </span>
                       </div>
 
                       <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10 mt-1">
