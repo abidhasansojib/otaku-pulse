@@ -94,7 +94,15 @@ function SearchContent() {
   };
 
   const hasNextPage = data?.pagination?.has_next_page || false;
-  const lastPage = data?.pagination?.last_visible_page || 1;
+  const totalItems = data?.pagination?.items?.total;
+  const itemCount = data?.data?.length || 0;
+  const lastPage = data?.pagination?.last_visible_page || (hasNextPage ? Math.max(page + 4, page + 1) : page);
+
+  const resultsSummary = totalItems
+    ? `${totalItems.toLocaleString()}`
+    : hasNextPage
+    ? `${(page - 1) * 24 + 1}–${(page - 1) * 24 + itemCount}+`
+    : `${itemCount}`;
 
   return (
     <div className="space-y-8">
@@ -115,7 +123,7 @@ function SearchContent() {
         {/* Mobile Filter Button */}
         <div className="lg:hidden flex items-center justify-between glass-panel p-4 rounded-2xl border border-white/10">
           <div className="text-xs text-slate-300 font-semibold">
-            Results Found: <span className="text-[#FF2A5F] font-bold">{data?.pagination?.items?.total || data?.data?.length || 0}</span>
+            Results Found: <span className="text-[#FF2A5F] font-bold">{resultsSummary}</span>
           </div>
 
           <button
@@ -129,9 +137,18 @@ function SearchContent() {
         {/* Results Grid */}
         <div className="lg:col-span-3 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-extrabold text-white">
-              {filters.q ? `Search Results for "${filters.q}"` : 'Anime Directory'}
-            </h2>
+            <div className="space-y-0.5">
+              <h2 className="text-xl font-extrabold text-white">
+                {filters.genre && filters.genre !== 'all'
+                  ? `${filters.genre} Anime`
+                  : filters.q
+                  ? `Search Results for "${filters.q}"`
+                  : 'Anime Directory'}
+              </h2>
+              <p className="text-xs text-slate-400">
+                Showing <strong className="text-white">{resultsSummary}</strong> entries
+              </p>
+            </div>
             <div className="hidden sm:block text-xs text-slate-400">
               Page <span className="text-white font-bold">{page}</span> of {lastPage}
             </div>

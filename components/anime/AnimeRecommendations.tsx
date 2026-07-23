@@ -16,17 +16,69 @@ interface RecommendationItem {
   votes: number;
 }
 
+async function fetchAniListRecommendations(animeId: number): Promise<RecommendationItem[]> {
+  const query = `
+    query ($idMal: Int) {
+      Media(idMal: $idMal, type: ANIME) {
+        recommendations(perPage: 8, sort: RATING_DESC) {
+          nodes {
+            rating
+            mediaRecommendation {
+              id
+              idMal
+              title { english romaji }
+              coverImage { extraLarge large medium }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const res = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ query, variables: { idMal: animeId } })
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    const nodes = json?.data?.Media?.recommendations?.nodes || [];
+
+    return nodes
+      .map((node: any) => {
+        const rec = node.mediaRecommendation;
+        if (!rec) return null;
+        return {
+          entry: {
+            mal_id: rec.idMal || rec.id,
+            title: rec.title?.english || rec.title?.romaji || 'Anime',
+            images: {
+              webp: { large_image_url: rec.coverImage?.extraLarge || rec.coverImage?.large },
+              jpg: { large_image_url: rec.coverImage?.extraLarge || rec.coverImage?.large },
+            },
+          },
+          votes: Math.max(1, node.rating || 10),
+        };
+      })
+      .filter(Boolean);
+  } catch (err) {
+    return [];
+  }
+}
+
 async function fetchAnimeRecommendations(animeId: number): Promise<RecommendationItem[]> {
   try {
     const url = `https://api.jikan.moe/v4/anime/${animeId}/recommendations`;
     const res = await rateLimitedFetch<any>(url);
-    if (res?.data && Array.isArray(res.data)) {
+    if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
       return res.data.slice(0, 8);
     }
   } catch (e) {
-    // Silent catch
+    // Fall back to AniList below
   }
-  return [];
+
+  return fetchAniListRecommendations(animeId);
 }
 
 export function AnimeRecommendations({ animeId }: { animeId: number }) {
