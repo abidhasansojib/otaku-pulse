@@ -34,9 +34,44 @@ export default function SignUpPage() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // If Supabase email send rate limit is exceeded, attempt direct sign in
+        if (
+          error.message?.toLowerCase().includes('rate limit') ||
+          (error as any).code === 'over_email_send_rate_limit'
+        ) {
+          const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (!loginErr && loginData?.user) {
+            router.push('/profile');
+            return;
+          } else {
+            setErrorMsg(
+              'Email rate limit reached for confirmation emails. Please sign in directly with your email and password.'
+            );
+            return;
+          }
+        }
+        throw error;
+      }
+
       if (data?.user) {
-        router.push('/profile');
+        if (data.session) {
+          router.push('/profile');
+        } else {
+          const { data: loginData } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (loginData?.user) {
+            router.push('/profile');
+          } else {
+            router.push('/profile');
+          }
+        }
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to create account');
