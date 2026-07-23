@@ -31,6 +31,7 @@ export interface WatchlistItem {
   poster_url: string;
   status: 'WATCHING' | 'COMPLETED' | 'PLAN_TO_WATCH' | 'DROPPED';
   episodes_watched: number;
+  total_episodes?: number;
   created_at: string;
 }
 
@@ -191,14 +192,29 @@ function ProfileContent() {
   };
 
   const handleUpdateEpisodeCount = async (item: WatchlistItem, newCount: number) => {
-    const targetCount = Math.max(0, newCount);
+    const totalEps = item.total_episodes || 0;
+    let targetCount = Math.max(0, newCount);
+
+    if (totalEps > 0 && targetCount >= totalEps) {
+      targetCount = totalEps;
+    }
+
+    let newStatus = item.status;
+    if (totalEps > 0 && targetCount >= totalEps) {
+      newStatus = 'COMPLETED';
+    } else if (totalEps > 0 && targetCount < totalEps && item.status === 'COMPLETED') {
+      newStatus = 'WATCHING';
+    }
+
     setWatchlist((prev) =>
-      prev.map((w) => (w.id === item.id ? { ...w, episodes_watched: targetCount } : w))
+      prev.map((w) =>
+        w.id === item.id ? { ...w, episodes_watched: targetCount, status: newStatus } : w
+      )
     );
 
     await supabase
       .from('watchlist')
-      .update({ episodes_watched: targetCount })
+      .update({ episodes_watched: targetCount, status: newStatus })
       .eq('id', item.id);
   };
 
@@ -260,6 +276,23 @@ function ProfileContent() {
     watchlistFilter === 'ALL' ? watchlist : watchlist.filter((w) => w.status === watchlistFilter);
 
   const avatarUrl = profile?.avatar_url || '/banner-placeholder.webp';
+
+  // Analytics & Visualization Metrics
+  const totalEpisodesWatched = watchlist.reduce((sum, item) => sum + (item.episodes_watched || 0), 0);
+  const totalMinutesWatched = totalEpisodesWatched * 24;
+  const totalHoursWatched = Math.floor(totalMinutesWatched / 60);
+  const totalDaysWatched = (totalMinutesWatched / 1440).toFixed(1);
+
+  const completedCount = watchlist.filter((item) => item.status === 'COMPLETED').length;
+  const watchingCount = watchlist.filter((item) => item.status === 'WATCHING').length;
+  const planToWatchCount = watchlist.filter((item) => item.status === 'PLAN_TO_WATCH').length;
+  const droppedCount = watchlist.filter((item) => item.status === 'DROPPED').length;
+
+  const totalWatchlistItems = watchlist.length || 1;
+  const completedPct = Math.round((completedCount / totalWatchlistItems) * 100);
+  const watchingPct = Math.round((watchingCount / totalWatchlistItems) * 100);
+  const planPct = Math.round((planToWatchCount / totalWatchlistItems) * 100);
+  const droppedPct = Math.round((droppedCount / totalWatchlistItems) * 100);
 
   return (
     <div className="space-y-8">
@@ -362,6 +395,105 @@ function ProfileContent() {
         </div>
       </div>
 
+      {/* Anime Watch Analytics & Progress Visualization */}
+      <div className="glass-panel p-6 rounded-3xl border border-white/15 shadow-2xl space-y-5 bg-slate-900/90">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#FF2A5F] to-[#8A2BE2] flex items-center justify-center shadow-lg shadow-[#FF2A5F]/20">
+              <Sparkles className="w-5 h-5 text-white animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-white tracking-tight">Anime Watch Analytics</h2>
+              <p className="text-xs text-slate-400">Visual breakdown of your overall watching progress</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-950 border border-white/10 text-xs font-extrabold text-[#FF2A5F]">
+            <Clock className="w-4 h-4 text-[#FF2A5F]" />
+            <span>Est. Watch Time: {totalHoursWatched} Hours ({totalDaysWatched} Days)</span>
+          </div>
+        </div>
+
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          <div className="p-4 rounded-2xl bg-slate-950/70 border border-white/10 space-y-1">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Episodes</span>
+            <p className="text-xl font-black text-white">{totalEpisodesWatched}</p>
+            <p className="text-[10px] text-slate-400">eps watched</p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-950/70 border border-emerald-500/30 space-y-1">
+            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Completed</span>
+            <p className="text-xl font-black text-emerald-400">{completedCount}</p>
+            <p className="text-[10px] text-slate-400">{completedPct}% of library</p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-950/70 border border-[#FF2A5F]/30 space-y-1">
+            <span className="text-[10px] font-bold text-[#FF2A5F] uppercase tracking-wider">Watching</span>
+            <p className="text-xl font-black text-[#FF2A5F]">{watchingCount}</p>
+            <p className="text-[10px] text-slate-400">{watchingPct}% in progress</p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-950/70 border border-purple-500/30 space-y-1">
+            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Plan to Watch</span>
+            <p className="text-xl font-black text-purple-400">{planToWatchCount}</p>
+            <p className="text-[10px] text-slate-400">{planPct}% queued</p>
+          </div>
+        </div>
+
+        {/* Visual Multi-Segment Progress Bar */}
+        {watchlist.length > 0 && (
+          <div className="space-y-2 pt-2">
+            <div className="flex justify-between text-xs font-bold text-slate-300">
+              <span>Library Status Distribution</span>
+              <span className="text-slate-400">{watchlist.length} Total Animes Tracked</span>
+            </div>
+
+            <div className="w-full h-3.5 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-white/10 flex gap-0.5">
+              <div
+                className="h-full bg-emerald-500 rounded-l-full transition-all duration-500"
+                style={{ width: `${completedPct}%` }}
+                title={`Completed: ${completedCount} (${completedPct}%)`}
+              />
+              <div
+                className="h-full bg-[#FF2A5F] transition-all duration-500"
+                style={{ width: `${watchingPct}%` }}
+                title={`Watching: ${watchingCount} (${watchingPct}%)`}
+              />
+              <div
+                className="h-full bg-purple-500 transition-all duration-500"
+                style={{ width: `${planPct}%` }}
+                title={`Plan to Watch: ${planToWatchCount} (${planPct}%)`}
+              />
+              <div
+                className="h-full bg-slate-600 rounded-r-full transition-all duration-500"
+                style={{ width: `${droppedPct}%` }}
+                title={`Dropped: ${droppedCount} (${droppedPct}%)`}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-4 text-[11px] font-bold pt-1 justify-center sm:justify-start">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span className="text-slate-300">Completed ({completedCount})</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FF2A5F]" />
+                <span className="text-slate-300">Watching ({watchingCount})</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+                <span className="text-slate-300">Plan to Watch ({planToWatchCount})</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-600" />
+                <span className="text-slate-300">Dropped ({droppedCount})</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Main Tabs Header */}
       <div className="flex border-b border-white/10 gap-2">
         <button
@@ -398,7 +530,7 @@ function ProfileContent() {
         </button>
       </div>
 
-      {/* TAB 1: WATCHLIST */}
+      {/* TAB 1: WATCHLIST GRID */}
       {activeTab === 'watchlist' && (
         <div className="space-y-6">
           {/* Sub-Filter Pills */}
@@ -420,73 +552,81 @@ function ProfileContent() {
 
           {filteredWatchlist.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredWatchlist.map((item) => (
-                <div
-                  key={item.id}
-                  className="glass-panel p-4 rounded-2xl border border-white/10 flex gap-4 items-center group hover:border-[#FF2A5F]/40 transition-all"
-                >
-                  <div className="relative w-20 aspect-[3/4] rounded-xl overflow-hidden bg-slate-900 shrink-0">
-                    <Image
-                      src={item.poster_url || '/banner-placeholder.webp'}
-                      alt={item.title}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
+              {filteredWatchlist.map((item) => {
+                const maxEps = item.total_episodes || 0;
+                const isMaxReached = maxEps > 0 && item.episodes_watched >= maxEps;
 
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    <Link
-                      href={`/anime/${item.anime_id}`}
-                      className="text-xs font-bold text-white hover:text-[#FF2A5F] truncate block"
-                    >
-                      {item.title}
-                    </Link>
-
-                    <div className="inline-block px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-bold text-[#FF2A5F]">
-                      {item.status.replace(/_/g, ' ')}
+                return (
+                  <div
+                    key={item.id}
+                    className="glass-panel p-4 rounded-2xl border border-white/10 flex gap-4 items-center group hover:border-[#FF2A5F]/40 transition-all"
+                  >
+                    <div className="relative w-20 aspect-[3/4] rounded-xl overflow-hidden bg-slate-900 shrink-0">
+                      <Image
+                        src={item.poster_url || '/banner-placeholder.webp'}
+                        alt={item.title}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10 mt-1">
-                      <div className="flex items-center gap-1.5 bg-slate-900 px-2 py-1 rounded-xl border border-white/10">
-                        <span className="text-[10px] text-slate-400 font-bold">Ep</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.episodes_watched}
-                          onChange={(e) => handleUpdateEpisodeCount(item, parseInt(e.target.value) || 0)}
-                          className="w-10 bg-transparent text-center text-xs font-black text-white focus:outline-none"
-                        />
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <Link
+                        href={`/anime/${item.anime_id}`}
+                        className="text-xs font-bold text-white hover:text-[#FF2A5F] truncate block"
+                      >
+                        {item.title}
+                      </Link>
+
+                      <div className="inline-block px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-bold text-[#FF2A5F]">
+                        {item.status.replace(/_/g, ' ')}
                       </div>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleUpdateEpisodeCount(item, item.episodes_watched - 1)}
-                          disabled={item.episodes_watched <= 0}
-                          className="px-2 py-1 rounded-lg bg-slate-800 text-white font-black text-[10px] hover:bg-[#FF2A5F] transition-colors disabled:opacity-30"
-                          title="Decrease episode"
-                        >
-                          -1
-                        </button>
-                        <button
-                          onClick={() => handleUpdateEpisodeCount(item, item.episodes_watched + 1)}
-                          className="px-2.5 py-1 rounded-lg bg-[#FF2A5F] text-white font-extrabold text-[10px] hover:scale-105 transition-transform shadow-sm shadow-[#FF2A5F]/20"
-                          title="Increment episode"
-                        >
-                          +1 Ep
-                        </button>
-                        <button
-                          onClick={() => handleRemoveFromWatchlist(item.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors ml-1"
-                          title="Remove from Watchlist"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10 mt-1">
+                        <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-xl border border-white/10">
+                          <span className="text-[10px] text-slate-400 font-bold">Ep</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={maxEps > 0 ? maxEps : 9999}
+                            value={item.episodes_watched}
+                            onChange={(e) => handleUpdateEpisodeCount(item, parseInt(e.target.value) || 0)}
+                            className="w-9 bg-transparent text-center text-xs font-black text-white focus:outline-none"
+                          />
+                          {maxEps > 0 && <span className="text-[10px] text-slate-400">/ {maxEps}</span>}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleUpdateEpisodeCount(item, item.episodes_watched - 1)}
+                            disabled={item.episodes_watched <= 0}
+                            className="px-2 py-1 rounded-lg bg-slate-800 text-white font-black text-[10px] hover:bg-[#FF2A5F] transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                            title="Decrease episode"
+                          >
+                            -1
+                          </button>
+                          <button
+                            onClick={() => handleUpdateEpisodeCount(item, item.episodes_watched + 1)}
+                            disabled={isMaxReached}
+                            className="px-2.5 py-1 rounded-lg bg-[#FF2A5F] text-white font-extrabold text-[10px] hover:scale-105 transition-transform shadow-sm shadow-[#FF2A5F]/20 disabled:opacity-30 disabled:pointer-events-none"
+                            title={isMaxReached ? 'All episodes completed!' : 'Increment episode'}
+                          >
+                            +1 Ep
+                          </button>
+                          <button
+                            onClick={() => handleRemoveFromWatchlist(item.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors ml-0.5"
+                            title="Remove from Watchlist"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="glass-panel p-12 rounded-3xl border border-white/10 text-center text-slate-400 space-y-3">
