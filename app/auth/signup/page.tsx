@@ -26,6 +26,7 @@ export default function SignUpPage() {
         email,
         password,
         options: {
+          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : 'https://otaku-pulse.vercel.app/auth/callback',
           data: {
             username: username || email.split('@')[0],
           },
