@@ -159,7 +159,7 @@ export async function getTopAnime(
   };
 
   try {
-    const aniListResults = await getTopAnimeAniList(sortMap[type] as any, limit);
+    const aniListResults = await getTopAnimeAniList(sortMap[type] as any, limit, page);
     if (aniListResults && aniListResults.length > 0) {
       return {
         data: deduplicateAnimeList(aniListResults),
@@ -222,7 +222,7 @@ export async function getSeasonalAnime(
   }
 
   // Fast AniList fallback with dynamic season & year
-  const aniListResults = await getCurrentSeasonAnimeAniList(season, year, limit);
+  const aniListResults = await getCurrentSeasonAnimeAniList(season, year, limit, page);
   return {
     data: deduplicateAnimeList(aniListResults),
     pagination: { last_visible_page: 5, has_next_page: true },
@@ -230,8 +230,8 @@ export async function getSeasonalAnime(
 }
 
 // Fetch Current Season Anime
-export async function getCurrentSeasonAnime(limit = 20): Promise<JikanResponse<AnimeItem[]>> {
-  return getSeasonalAnime(undefined, undefined, 1, limit);
+export async function getCurrentSeasonAnime(limit = 20, page = 1): Promise<JikanResponse<AnimeItem[]>> {
+  return getSeasonalAnime(undefined, undefined, page, limit);
 }
 
 // Fetch Hero Featured Anime

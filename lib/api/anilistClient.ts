@@ -408,7 +408,7 @@ export async function searchAnimeAniList(
   return mediaList.map(mapAniListToAnimeItem);
 }
 
-// Fast Top Anime via AniList (Supports up to 100+ items via parallel page fetches)
+// Fast Top Anime via AniList (Supports fetching 100-item batches dynamically by page)
 export async function getTopAnimeAniList(
   sortType: 'SCORE_DESC' | 'POPULARITY_DESC' | 'TRENDING_DESC' = 'SCORE_DESC',
   perPage = 20,
@@ -416,11 +416,14 @@ export async function getTopAnimeAniList(
 ): Promise<AnimeItem[]> {
   if (perPage > 50) {
     const page1Count = Math.min(50, perPage);
-    const page2Count = Math.min(50, perPage - page1Count);
+    const page2Count = Math.max(0, perPage - page1Count);
+
+    const aniPage1 = (page - 1) * 2 + 1;
+    const aniPage2 = (page - 1) * 2 + 2;
 
     const [res1, res2] = await Promise.all([
-      getTopAnimeAniList(sortType, page1Count, 1),
-      page2Count > 0 ? getTopAnimeAniList(sortType, page2Count, 2) : Promise.resolve([]),
+      getTopAnimeAniList(sortType, page1Count, aniPage1),
+      page2Count > 0 ? getTopAnimeAniList(sortType, page2Count, aniPage2) : Promise.resolve([]),
     ]);
 
     return [...res1, ...res2];
@@ -465,11 +468,14 @@ export async function getCurrentSeasonAnimeAniList(
 ): Promise<AnimeItem[]> {
   if (perPage > 50) {
     const page1Count = Math.min(50, perPage);
-    const page2Count = Math.min(50, perPage - page1Count);
+    const page2Count = Math.max(0, perPage - page1Count);
+
+    const aniPage1 = (page - 1) * 2 + 1;
+    const aniPage2 = (page - 1) * 2 + 2;
 
     const [res1, res2] = await Promise.all([
-      getCurrentSeasonAnimeAniList(season, year, page1Count, 1),
-      page2Count > 0 ? getCurrentSeasonAnimeAniList(season, year, page2Count, 2) : Promise.resolve([]),
+      getCurrentSeasonAnimeAniList(season, year, page1Count, aniPage1),
+      page2Count > 0 ? getCurrentSeasonAnimeAniList(season, year, page2Count, aniPage2) : Promise.resolve([]),
     ]);
 
     return [...res1, ...res2];
