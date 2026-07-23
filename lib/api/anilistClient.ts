@@ -408,14 +408,27 @@ export async function searchAnimeAniList(
   return mediaList.map(mapAniListToAnimeItem);
 }
 
-// Fast Top Anime via AniList
+// Fast Top Anime via AniList (Supports up to 100+ items via parallel page fetches)
 export async function getTopAnimeAniList(
   sortType: 'SCORE_DESC' | 'POPULARITY_DESC' | 'TRENDING_DESC' = 'SCORE_DESC',
-  perPage = 20
+  perPage = 20,
+  page = 1
 ): Promise<AnimeItem[]> {
+  if (perPage > 50) {
+    const page1Count = Math.min(50, perPage);
+    const page2Count = Math.min(50, perPage - page1Count);
+
+    const [res1, res2] = await Promise.all([
+      getTopAnimeAniList(sortType, page1Count, 1),
+      page2Count > 0 ? getTopAnimeAniList(sortType, page2Count, 2) : Promise.resolve([]),
+    ]);
+
+    return [...res1, ...res2];
+  }
+
   const query = `
-    query ($sort: [MediaSort], $perPage: Int) {
-      Page (page: 1, perPage: $perPage) {
+    query ($sort: [MediaSort], $page: Int, $perPage: Int) {
+      Page (page: $page, perPage: $perPage) {
         media (type: ANIME, sort: $sort) {
           id
           idMal
@@ -438,7 +451,7 @@ export async function getTopAnimeAniList(
     }
   `;
 
-  const data = await fetchAniListGraphQL<any>(query, { sort: [sortType], perPage });
+  const data = await fetchAniListGraphQL<any>(query, { sort: [sortType], page, perPage });
   const mediaList: AniListMedia[] = data?.Page?.media || [];
   return mediaList.map(mapAniListToAnimeItem);
 }
@@ -447,15 +460,28 @@ export async function getTopAnimeAniList(
 export async function getCurrentSeasonAnimeAniList(
   season?: string,
   year?: number,
-  perPage = 24
+  perPage = 24,
+  page = 1
 ): Promise<AnimeItem[]> {
+  if (perPage > 50) {
+    const page1Count = Math.min(50, perPage);
+    const page2Count = Math.min(50, perPage - page1Count);
+
+    const [res1, res2] = await Promise.all([
+      getCurrentSeasonAnimeAniList(season, year, page1Count, 1),
+      page2Count > 0 ? getCurrentSeasonAnimeAniList(season, year, page2Count, 2) : Promise.resolve([]),
+    ]);
+
+    return [...res1, ...res2];
+  }
+
   const current = getCurrentSeasonAndYear();
   const targetSeason = (season || current.season).toUpperCase(); // e.g., "SUMMER"
   const targetYear = year || current.year; // e.g., 2026
 
   const query = `
-    query ($season: MediaSeason, $seasonYear: Int, $perPage: Int) {
-      Page (page: 1, perPage: $perPage) {
+    query ($season: MediaSeason, $seasonYear: Int, $page: Int, $perPage: Int) {
+      Page (page: $page, perPage: $perPage) {
         media (type: ANIME, season: $season, seasonYear: $seasonYear, sort: [POPULARITY_DESC]) {
           id
           idMal
@@ -481,12 +507,13 @@ export async function getCurrentSeasonAnimeAniList(
   const data = await fetchAniListGraphQL<any>(query, {
     season: targetSeason,
     seasonYear: targetYear,
+    page,
     perPage,
   });
 
   const mediaList: AniListMedia[] = data?.Page?.media || [];
   if (!mediaList || mediaList.length === 0) {
-    return getTopAnimeAniList('TRENDING_DESC', perPage);
+    return getTopAnimeAniList('TRENDING_DESC', perPage, page);
   }
   return mediaList.map(mapAniListToAnimeItem);
 }

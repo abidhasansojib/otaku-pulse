@@ -104,46 +104,8 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading, onP
           })}
         </div>
 
-        {/* Display Controls: Page Size & View Mode */}
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
-          {/* Page Size Options */}
-          <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5">
-            <span className="text-[11px] font-semibold text-slate-400 px-2 flex items-center gap-1">
-              <Layers className="w-3 h-3 text-[#FF2A5F]" />
-              Show:
-            </span>
-
-            {([15, 25, 50] as const).map((size) => (
-              <button
-                key={`size-${size}`}
-                onClick={() => handlePageSizeChange(size)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  pageSize === size
-                    ? 'bg-[#FF2A5F] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-                title={`Show ${size} anime per page`}
-              >
-                {size} / pg
-              </button>
-            ))}
-
-            <button
-              onClick={() => handlePageSizeChange('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                pageSize === 'all'
-                  ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`}
-              title="View all 1-100 rankings in one continuous list"
-            >
-              <Eye className="w-3 h-3" />
-              View All (1-100)
-            </button>
-          </div>
-
-          {/* View Mode Toggle */}
-          <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5">
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5">
             <button
               onClick={() => setViewMode('table')}
               className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
@@ -166,7 +128,6 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading, onP
             </button>
           </div>
         </div>
-      </div>
 
       {/* Table / Grid Content */}
       <AnimatePresence mode="wait">
