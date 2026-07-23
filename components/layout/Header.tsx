@@ -120,47 +120,28 @@ export function Header() {
             })}
           </nav>
 
-          {/* Quick Actions & Auth User Section */}
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={handleRandomAnime}
-              disabled={isRandomLoading}
-              className="px-3.5 py-2 rounded-full bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md hover:scale-105 transition-all disabled:opacity-50"
-              title="Route to a random anime"
-            >
-              <Dices className={`w-4 h-4 ${isRandomLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Surprise Me</span>
-            </button>
-
-            <Link
-              href="/search"
-              className="p-2.5 rounded-full bg-slate-800/80 border border-white/10 text-slate-300 hover:text-white hover:border-[#FF2A5F]/50 transition-all"
-              aria-label="Search anime"
-            >
-              <Search className="w-4 h-4" />
-            </Link>
-
-            {/* Auth Dropdown or Login Button */}
+          {/* Right-aligned Auth & User Profile Section */}
+          <div className="flex items-center gap-3 ml-auto sm:ml-0">
             {user ? (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-slate-900/80 border border-white/15 hover:border-[#FF2A5F] transition-all"
+                  className="flex items-center gap-2.5 p-1.5 pr-3 rounded-full bg-slate-900/90 border border-white/15 hover:border-[#FF2A5F] transition-all shadow-md group"
                 >
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden bg-slate-800 border border-white/10 shrink-0">
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden bg-slate-800 border border-white/10 shrink-0 group-hover:scale-105 transition-transform">
                     <Image src={avatarUrl} alt={usernameDisplay} fill className="object-cover" unoptimized />
                   </div>
-                  <span className="text-xs font-bold text-white max-w-[100px] truncate hidden sm:inline">
+                  <span className="text-xs font-extrabold text-white max-w-[110px] truncate hidden sm:inline">
                     {usernameDisplay}
                   </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
                 </button>
 
                 {/* User Menu Dropdown */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 glass-panel rounded-2xl border border-white/15 shadow-2xl p-2 space-y-1 z-50 animate-in fade-in duration-150">
-                    <div className="px-3 py-2 border-b border-white/10 mb-1">
-                      <p className="text-xs font-extrabold text-white truncate">{usernameDisplay}</p>
+                  <div className="absolute right-0 mt-2.5 w-60 glass-panel rounded-2xl border border-white/15 shadow-2xl p-2 space-y-1 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-3.5 py-2.5 border-b border-white/10 mb-1 bg-white/5 rounded-xl">
+                      <p className="text-xs font-black text-white truncate">{usernameDisplay}</p>
                       <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
                     </div>
 
@@ -171,6 +152,15 @@ export function Header() {
                     >
                       <UserIcon className="w-4 h-4 text-[#FF2A5F]" />
                       <span>My Profile & Dashboard</span>
+                    </Link>
+
+                    <Link
+                      href="/profile?edit=true"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/10 transition-all"
+                    >
+                      <Settings className="w-4 h-4 text-amber-400" />
+                      <span>Edit Profile</span>
                     </Link>
 
                     <Link
@@ -207,7 +197,7 @@ export function Header() {
             ) : (
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="px-4 py-2 rounded-full bg-slate-900/90 hover:bg-[#FF2A5F] text-white text-xs font-extrabold border border-white/15 hover:border-[#FF2A5F] shadow-md transition-all flex items-center gap-1.5"
+                className="px-4 py-2 rounded-full bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] hover:scale-105 text-white text-xs font-black shadow-lg shadow-[#FF2A5F]/20 transition-all flex items-center gap-1.5"
               >
                 <UserIcon className="w-3.5 h-3.5" />
                 <span>Sign In</span>

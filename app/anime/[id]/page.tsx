@@ -45,6 +45,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
 
   const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null);
+  const [episodesWatched, setEpisodesWatched] = useState<number>(0);
   const [isUpdatingWatchlist, setIsUpdatingWatchlist] = useState(false);
   const [watchlistMsg, setWatchlistMsg] = useState<string | null>(null);
 
@@ -68,13 +69,14 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
     try {
       const { data, error } = await supabase
         .from('watchlist')
-        .select('status')
+        .select('status, episodes_watched')
         .eq('user_id', user.id)
         .eq('anime_id', numericAnimeId)
         .single();
 
       if (!error && data) {
         setWatchlistStatus(data.status);
+        setEpisodesWatched(data.episodes_watched || 0);
       }
     } catch (e) {
       // Silent catch
@@ -102,6 +104,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
           .eq('anime_id', numericAnimeId);
 
         setWatchlistStatus(null);
+        setEpisodesWatched(0);
         setWatchlistMsg('Removed from Watchlist');
       } else {
         const { error } = await supabase.from('watchlist').upsert(
@@ -111,6 +114,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
             title,
             poster_url: posterUrl,
             status: newStatus,
+            episodes_watched: episodesWatched,
           },
           { onConflict: 'user_id,anime_id' }
         );
@@ -123,6 +127,43 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
       setWatchlistMsg(`Error: ${err.message}`);
     } finally {
       setIsUpdatingWatchlist(false);
+    }
+  };
+
+  const handleSetEpisodesWatched = async (count: number) => {
+    if (!user) return;
+    const targetCount = Math.max(0, count);
+    setEpisodesWatched(targetCount);
+
+    const totalEps = anime?.episodes || 0;
+    let newStatus = watchlistStatus || 'WATCHING';
+
+    if (totalEps > 0 && targetCount >= totalEps) {
+      newStatus = 'COMPLETED';
+      setWatchlistStatus('COMPLETED');
+    }
+
+    const posterUrl =
+      anime?.images?.webp?.large_image_url ||
+      anime?.images?.jpg?.large_image_url ||
+      '/banner-placeholder.webp';
+    const title = anime?.title_english || anime?.title || 'Anime';
+
+    try {
+      await supabase.from('watchlist').upsert(
+        {
+          user_id: user.id,
+          anime_id: numericAnimeId,
+          title,
+          poster_url: posterUrl,
+          status: newStatus,
+          episodes_watched: targetCount,
+        },
+        { onConflict: 'user_id,anime_id' }
+      );
+      setWatchlistStatus(newStatus);
+    } catch (err) {
+      console.error('Failed to update watched episodes:', err);
     }
   };
 
@@ -293,6 +334,114 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
       {watchlistMsg && (
         <div className="p-3 rounded-2xl bg-[#FF2A5F]/10 border border-[#FF2A5F]/30 text-[#FF2A5F] text-xs font-bold text-center">
           {watchlistMsg}
+        </div>
+      )}
+
+      {/* Advanced Interactive Episode Watch Tracker */}
+      {user && watchlistStatus && (
+        <div className="glass-panel p-6 rounded-3xl border border-[#FF2A5F]/30 bg-slate-900/80 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#FF2A5F] to-[#8A2BE2] flex items-center justify-center shadow-md shadow-[#FF2A5F]/30">
+                <Tv className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                  Episode Watch Tracker
+                  {watchlistStatus === 'COMPLETED' && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Completed
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-slate-300">
+                  {anime?.episodes
+                    ? `You have watched ${episodesWatched} of ${anime.episodes} episodes`
+                    : `You have watched ${episodesWatched} episodes`}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Controls */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleSetEpisodesWatched(episodesWatched - 1)}
+                disabled={episodesWatched <= 0}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 border border-white/10 text-white font-black text-sm hover:bg-[#FF2A5F] hover:border-[#FF2A5F] transition-all disabled:opacity-30 disabled:pointer-events-none"
+                title="Decrease episode"
+              >
+                -1
+              </button>
+
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 border border-white/15">
+                <span className="text-xs text-slate-400 font-semibold">Ep</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={anime?.episodes || 9999}
+                  value={episodesWatched}
+                  onChange={(e) => handleSetEpisodesWatched(parseInt(e.target.value) || 0)}
+                  className="w-12 bg-transparent text-center text-xs font-black text-white focus:outline-none"
+                />
+                {anime?.episodes && <span className="text-xs text-slate-400">/ {anime.episodes}</span>}
+              </div>
+
+              <button
+                onClick={() => handleSetEpisodesWatched(episodesWatched + 1)}
+                disabled={anime?.episodes ? episodesWatched >= anime.episodes : false}
+                className="px-3 py-1.5 rounded-xl bg-[#FF2A5F] border border-[#FF2A5F] text-white font-black text-sm hover:scale-105 transition-all shadow-md shadow-[#FF2A5F]/20 disabled:opacity-30 disabled:pointer-events-none"
+                title="Increase episode"
+              >
+                +1 Ep
+              </button>
+            </div>
+          </div>
+
+          {/* Animated Neon Progress Bar */}
+          {anime?.episodes && anime.episodes > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <div className="w-full h-3 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-white/10 relative">
+                <div
+                  className="h-full bg-gradient-to-r from-[#FF2A5F] via-[#8A2BE2] to-cyan-400 rounded-full transition-all duration-300 shadow-sm"
+                  style={{ width: `${Math.min(100, Math.round((episodesWatched / anime.episodes) * 100))}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[11px] font-bold text-slate-400">
+                <span>Ep 0</span>
+                <span className="text-[#FF2A5F]">
+                  {Math.min(100, Math.round((episodesWatched / anime.episodes) * 100))}% Finished
+                </span>
+                <span>Ep {anime.episodes}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Episode Grid Selector (Pills for Ep 1 .. N) */}
+          {anime?.episodes && anime.episodes > 0 && (
+            <div className="pt-2 border-t border-white/10">
+              <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 mb-2">
+                Click Episode to Update Progress:
+              </p>
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                {Array.from({ length: Math.min(anime.episodes, 50) }, (_, i) => i + 1).map((epNum) => {
+                  const isWatched = epNum <= episodesWatched;
+                  return (
+                    <button
+                      key={epNum}
+                      onClick={() => handleSetEpisodesWatched(epNum)}
+                      className={`w-8 h-8 text-xs font-black rounded-xl transition-all border ${
+                        isWatched
+                          ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white border-[#FF2A5F] shadow-sm shadow-[#FF2A5F]/30 scale-100'
+                          : 'bg-slate-900/90 text-slate-400 border-white/10 hover:text-white hover:border-white/30'
+                      }`}
+                    >
+                      {epNum}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

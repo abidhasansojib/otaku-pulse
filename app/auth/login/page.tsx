@@ -109,31 +109,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="space-y-3">
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-white/10 w-full" />
-            <span className="bg-[#0B0F19] px-3 text-[10px] text-slate-400 uppercase font-semibold absolute">
-              or continue with
-            </span>
-          </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <button
-              onClick={() => handleOAuth('google')}
-              type="button"
-              className="py-2.5 px-4 rounded-xl bg-slate-900/90 border border-white/10 text-white text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10 transition-colors"
-            >
-              Google
-            </button>
-            <button
-              onClick={() => handleOAuth('discord')}
-              type="button"
-              className="py-2.5 px-4 rounded-xl bg-slate-900/90 border border-white/10 text-white text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10 transition-colors"
-            >
-              Discord
-            </button>
-          </div>
-        </div>
 
         <div className="text-center text-xs text-slate-400 pt-2 border-t border-white/10">
           Don&apos;t have an account?{' '}

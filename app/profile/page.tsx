@@ -76,8 +76,12 @@ function ProfileContent() {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
+    const edit = searchParams.get('edit');
     if (tab === 'watchlist' || tab === 'favorites' || tab === 'reviews') {
       setActiveTab(tab);
+    }
+    if (edit === 'true') {
+      setIsEditingProfile(true);
     }
   }, [searchParams]);
 
@@ -186,15 +190,15 @@ function ProfileContent() {
     }
   };
 
-  const handleIncrementEpisode = async (item: WatchlistItem) => {
-    const newEpCount = item.episodes_watched + 1;
+  const handleUpdateEpisodeCount = async (item: WatchlistItem, newCount: number) => {
+    const targetCount = Math.max(0, newCount);
     setWatchlist((prev) =>
-      prev.map((w) => (w.id === item.id ? { ...w, episodes_watched: newEpCount } : w))
+      prev.map((w) => (w.id === item.id ? { ...w, episodes_watched: targetCount } : w))
     );
 
     await supabase
       .from('watchlist')
-      .update({ episodes_watched: newEpCount })
+      .update({ episodes_watched: targetCount })
       .eq('id', item.id);
   };
 
@@ -443,22 +447,37 @@ function ProfileContent() {
                       {item.status.replace(/_/g, ' ')}
                     </div>
 
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[11px] text-slate-400">
-                        Eps: <strong className="text-white">{item.episodes_watched}</strong>
-                      </span>
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10 mt-1">
+                      <div className="flex items-center gap-1.5 bg-slate-900 px-2 py-1 rounded-xl border border-white/10">
+                        <span className="text-[10px] text-slate-400 font-bold">Ep</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={item.episodes_watched}
+                          onChange={(e) => handleUpdateEpisodeCount(item, parseInt(e.target.value) || 0)}
+                          className="w-10 bg-transparent text-center text-xs font-black text-white focus:outline-none"
+                        />
+                      </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         <button
-                          onClick={() => handleIncrementEpisode(item)}
-                          className="px-2 py-1 rounded-lg bg-[#FF2A5F] text-white font-extrabold text-[10px] hover:scale-105 transition-transform"
+                          onClick={() => handleUpdateEpisodeCount(item, item.episodes_watched - 1)}
+                          disabled={item.episodes_watched <= 0}
+                          className="px-2 py-1 rounded-lg bg-slate-800 text-white font-black text-[10px] hover:bg-[#FF2A5F] transition-colors disabled:opacity-30"
+                          title="Decrease episode"
+                        >
+                          -1
+                        </button>
+                        <button
+                          onClick={() => handleUpdateEpisodeCount(item, item.episodes_watched + 1)}
+                          className="px-2.5 py-1 rounded-lg bg-[#FF2A5F] text-white font-extrabold text-[10px] hover:scale-105 transition-transform shadow-sm shadow-[#FF2A5F]/20"
                           title="Increment episode"
                         >
                           +1 Ep
                         </button>
                         <button
                           onClick={() => handleRemoveFromWatchlist(item.id)}
-                          className="p-1 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors ml-1"
                           title="Remove from Watchlist"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
