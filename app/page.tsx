@@ -24,19 +24,19 @@ export default function HomePage() {
   // Fetch Top Rated
   const { data: topRatedRes, isLoading: isTopLoading } = useQuery({
     queryKey: ['topRatedAnime'],
-    queryFn: () => getTopAnime('rating', 1, 15),
+    queryFn: () => getTopAnime('rating', 1, 100),
   });
 
   // Fetch Most Popular
   const { data: popularRes, isLoading: isPopularLoading } = useQuery({
     queryKey: ['mostPopularAnime'],
-    queryFn: () => getTopAnime('bypopularity', 1, 15),
+    queryFn: () => getTopAnime('bypopularity', 1, 100),
   });
 
   // Fetch Current Season
   const { data: seasonRes, isLoading: isSeasonLoading } = useQuery({
     queryKey: ['currentSeasonAnime'],
-    queryFn: () => getCurrentSeasonAnime(15),
+    queryFn: () => getCurrentSeasonAnime(100),
   });
 
   // Fetch Official Genres (GET /genres/anime)

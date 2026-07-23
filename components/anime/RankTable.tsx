@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Trophy, Flame, Calendar, Volume2, LayoutGrid, List, Play } from 'lucide-react';
+import { Star, Trophy, Flame, Calendar, Volume2, LayoutGrid, List, Play, ChevronLeft, ChevronRight, Eye, Layers } from 'lucide-react';
 import { AnimeItem } from '../../lib/types/anime';
 import { Badge } from '../ui/Badge';
 import { AnimeCard } from './AnimeCard';
+import { AnimeCardSkeleton } from '../ui/Skeleton';
 
 interface RankTableProps {
   topRated: AnimeItem[];
@@ -20,6 +21,9 @@ interface RankTableProps {
 export function RankTable({ topRated, mostPopular, currentSeason, isLoading, onPlayTrailer }: RankTableProps) {
   const [activeTab, setActiveTab] = useState<'rated' | 'popular' | 'season'>('rated');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [pageSize, setPageSize] = useState<number | 'all'>(15);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const tabs = [
     { id: 'rated', label: 'Top Rated', icon: Trophy, data: topRated },
@@ -29,19 +33,52 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading, onP
 
   const currentData = tabs.find((t) => t.id === activeTab)?.data || [];
 
+  // Reset page state on tab change
+  const handleTabChange = (tabId: 'rated' | 'popular' | 'season') => {
+    setActiveTab(tabId);
+    setCurrentPage(1);
+  };
+
+  // Handle page size change
+  const handlePageSizeChange = (size: number | 'all') => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
+
+  // Pagination math
+  const isViewAll = pageSize === 'all';
+  const effectivePageSize = isViewAll ? (currentData.length || 100) : pageSize;
+  const totalPages = isViewAll ? 1 : Math.ceil((currentData.length || 1) / effectivePageSize);
+  const validPage = Math.min(Math.max(1, currentPage), Math.max(1, totalPages));
+
+  const startIndex = isViewAll ? 0 : (validPage - 1) * effectivePageSize;
+  const endIndex = isViewAll ? currentData.length : Math.min(currentData.length, startIndex + effectivePageSize);
+  const displayedData = currentData.slice(startIndex, endIndex);
+
+  const scrollToTop = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handlePageClick = (page: number) => {
+    setCurrentPage(page);
+    scrollToTop();
+  };
+
   return (
-    <div className="w-full space-y-6">
-      {/* Header & Tabs */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 glass-panel p-4 rounded-2xl border border-white/10">
+    <div ref={containerRef} className="w-full space-y-6 scroll-mt-24">
+      {/* Header & Controls Panel */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 glass-panel p-4 rounded-2xl border border-white/10 shadow-xl">
         {/* Tab Buttons */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900/80 rounded-xl border border-white/5 w-full sm:w-auto overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1.5 bg-slate-900/80 rounded-xl border border-white/5 w-full lg:w-auto overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => handleTabChange(tab.id as any)}
                 className={`relative px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap ${
                   isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -56,51 +93,113 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading, onP
                 <span className="relative z-10 flex items-center gap-2">
                   <Icon className="w-3.5 h-3.5" />
                   {tab.label}
+                  {tab.data.length > 0 && (
+                    <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-black/40 text-slate-300 font-normal">
+                      {tab.data.length}
+                    </span>
+                  )}
                 </span>
               </button>
             );
           })}
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5 self-end sm:self-auto">
-          <button
-            onClick={() => setViewMode('table')}
-            className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
-              viewMode === 'table' ? 'bg-[#FF2A5F] text-white' : 'text-slate-400 hover:text-white'
-            }`}
-            aria-label="Table View"
-          >
-            <List className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
-              viewMode === 'grid' ? 'bg-[#FF2A5F] text-white' : 'text-slate-400 hover:text-white'
-            }`}
-            aria-label="Grid View"
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
+        {/* Display Controls: Page Size & View Mode */}
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
+          {/* Page Size Options */}
+          <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5">
+            <span className="text-[11px] font-semibold text-slate-400 px-2 flex items-center gap-1">
+              <Layers className="w-3 h-3 text-[#FF2A5F]" />
+              Show:
+            </span>
+
+            {([15, 25, 50] as const).map((size) => (
+              <button
+                key={`size-${size}`}
+                onClick={() => handlePageSizeChange(size)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  pageSize === size
+                    ? 'bg-[#FF2A5F] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+                title={`Show ${size} anime per page`}
+              >
+                {size} / pg
+              </button>
+            ))}
+
+            <button
+              onClick={() => handlePageSizeChange('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                pageSize === 'all'
+                  ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white shadow-md'
+                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+              title="View all 1-100 rankings in one continuous list"
+            >
+              <Eye className="w-3 h-3" />
+              View All (1-100)
+            </button>
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
+                viewMode === 'table' ? 'bg-[#FF2A5F] text-white' : 'text-slate-400 hover:text-white'
+              }`}
+              aria-label="Table View"
+              title="Table View"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
+                viewMode === 'grid' ? 'bg-[#FF2A5F] text-white' : 'text-slate-400 hover:text-white'
+              }`}
+              aria-label="Grid View"
+              title="Grid View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Table / Grid Content */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={activeTab + viewMode}
+          key={activeTab + viewMode + pageSize + validPage}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.25 }}
         >
-          {viewMode === 'grid' ? (
+          {isLoading ? (
+            /* Skeleton Loading State */
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {Array.from({ length: 15 }).map((_, i) => (
+                  <AnimeCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : (
+              <div className="glass-panel rounded-2xl p-6 space-y-4 border border-white/10">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="h-14 bg-slate-800/60 rounded-xl animate-pulse w-full" />
+                ))}
+              </div>
+            )
+          ) : viewMode === 'grid' ? (
+            /* Grid View */
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {currentData.slice(0, 15).map((anime, index) => (
+              {displayedData.map((anime, index) => (
                 <AnimeCard
-                  key={`rank-grid-${anime.mal_id}-${index}`}
+                  key={`rank-grid-${anime.mal_id}-${startIndex + index}`}
                   anime={anime}
-                  rank={index + 1}
+                  rank={startIndex + index + 1}
                   onPlayTrailer={onPlayTrailer}
                 />
               ))}
@@ -120,14 +219,14 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading, onP
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-sm">
-                  {currentData.slice(0, 15).map((anime, index) => {
-                    const rank = index + 1;
+                  {displayedData.map((anime, index) => {
+                    const rank = startIndex + index + 1;
                     const title = anime.title_english || anime.title;
                     const poster = anime.images?.webp?.small_image_url || anime.images?.jpg?.small_image_url;
 
                     return (
                       <tr
-                        key={`rank-row-${anime.mal_id}-${index}`}
+                        key={`rank-row-${anime.mal_id}-${startIndex + index}`}
                         className="hover:bg-white/[0.03] transition-colors group"
                       >
                         {/* Rank */}
@@ -180,7 +279,9 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading, onP
                         {/* Format & Ep */}
                         <td className="py-3 px-4 hidden md:table-cell text-xs text-slate-300">
                           <div>{anime.type || 'TV'}</div>
-                          <div className="text-[11px] text-slate-400">{anime.episodes ? `${anime.episodes} episodes` : 'Ongoing'}</div>
+                          <div className="text-[11px] text-slate-400">
+                            {anime.episodes ? `${anime.episodes} episodes` : 'Ongoing'}
+                          </div>
                         </td>
 
                         {/* Audio Dub */}
@@ -229,6 +330,105 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading, onP
           )}
         </motion.div>
       </AnimatePresence>
+
+      {/* Pagination & Page Slider Controls */}
+      {!isLoading && currentData.length > 0 && (
+        <div className="glass-panel p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+          {/* Rank Range Info */}
+          <div className="text-xs text-slate-400 text-center sm:text-left font-medium">
+            {isViewAll ? (
+              <span>
+                Displaying all <strong className="text-white">{currentData.length}</strong> anime rankings on one page
+              </span>
+            ) : (
+              <span>
+                Showing ranks <strong className="text-white">#{startIndex + 1}</strong> –{' '}
+                <strong className="text-white">#{endIndex}</strong> of{' '}
+                <strong className="text-white">{currentData.length}</strong> Global Rankings
+              </span>
+            )}
+          </div>
+
+          {/* Slide & Page Navigation Controls */}
+          {!isViewAll && totalPages > 1 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
+              {/* Previous Page Button */}
+              <button
+                onClick={() => handlePageClick(validPage - 1)}
+                disabled={validPage === 1}
+                className="p-2 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white hover:bg-[#FF2A5F] disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1 text-xs font-bold"
+                aria-label="Previous Page"
+                title="Previous Page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden md:inline">Prev</span>
+              </button>
+
+              {/* Page Number Pills */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => {
+                  const pageNum = i + 1;
+                  const isActive = pageNum === validPage;
+                  const pageStartIndex = (pageNum - 1) * (typeof pageSize === 'number' ? pageSize : 15) + 1;
+                  const pageEndIndex = Math.min(currentData.length, pageNum * (typeof pageSize === 'number' ? pageSize : 15));
+
+                  return (
+                    <button
+                      key={`page-btn-${pageNum}`}
+                      onClick={() => handlePageClick(pageNum)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all relative ${
+                        isActive
+                          ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white shadow-lg scale-105'
+                          : 'bg-slate-900/80 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                      }`}
+                      title={`Page ${pageNum}: Ranks #${pageStartIndex}–#${pageEndIndex}`}
+                    >
+                      {pageNum}
+                      <span className="hidden xl:inline text-[10px] ml-1 opacity-75 font-normal">
+                        (#{pageStartIndex}–{pageEndIndex})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Next Page Button */}
+              <button
+                onClick={() => handlePageClick(validPage + 1)}
+                disabled={validPage === totalPages}
+                className="p-2 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white hover:bg-[#FF2A5F] disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-1 text-xs font-bold"
+                aria-label="Next Page"
+                title="Next Page"
+              >
+                <span className="hidden md:inline">Next</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Quick Toggle to View All (if in paginated mode) */}
+          {!isViewAll && (
+            <button
+              onClick={() => handlePageSizeChange('all')}
+              className="text-xs font-bold text-[#FF2A5F] hover:text-[#8A2BE2] transition-colors flex items-center gap-1 whitespace-nowrap underline underline-offset-4 decoration-[#FF2A5F]/40"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              View All (1-{currentData.length}) in One Page
+            </button>
+          )}
+
+          {/* Return to 15 per page toggle (if in view all mode) */}
+          {isViewAll && (
+            <button
+              onClick={() => handlePageSizeChange(15)}
+              className="text-xs font-bold text-[#FF2A5F] hover:text-[#8A2BE2] transition-colors flex items-center gap-1 whitespace-nowrap underline underline-offset-4 decoration-[#FF2A5F]/40"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Switch back to 15 per page
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
