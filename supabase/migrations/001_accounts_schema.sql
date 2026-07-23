@@ -152,3 +152,9 @@ CREATE POLICY "Users can delete their own avatar"
     bucket_id = 'avatars' 
     AND auth.uid()::text = (storage.foldername(name))[1]
   );
+
+-- 8. GRANT PRIVILEGES TO POSTGREST ROLES
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+
