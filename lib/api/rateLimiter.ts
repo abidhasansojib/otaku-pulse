@@ -78,42 +78,12 @@ class RateLimiterQueue {
   }
 }
 
+import { fetchWithRetry } from './fetcher';
+
 export const rateLimiter = new RateLimiterQueue();
 
 export async function rateLimitedFetch<T>(url: string, options?: RequestInit): Promise<T> {
   return rateLimiter.enqueue(url, async () => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4-second timeout limit
-
-    try {
-      const res = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-          ...options?.headers,
-        },
-        next: { revalidate: 86400 },
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!res.ok) {
-        const error: any = new Error(`HTTP Error ${res.status}: ${res.statusText}`);
-        error.status = res.status;
-        throw error;
-      }
-
-      const data = await res.json();
-      return data as T;
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      if (err.name === 'AbortError') {
-        const timeoutError: any = new Error('HTTP 504 Timeout');
-        timeoutError.status = 504;
-        throw timeoutError;
-      }
-      throw err;
-    }
+    return fetchWithRetry(url, 2, 1000) as Promise<T>;
   });
 }

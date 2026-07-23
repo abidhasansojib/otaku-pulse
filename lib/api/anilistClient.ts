@@ -159,7 +159,7 @@ interface AniListMedia {
   };
 }
 
-function mapAniListToAnimeItem(media: AniListMedia): AnimeItem {
+export function mapAniListToAnimeItem(media: AniListMedia): AnimeItem {
   const mal_id = media.idMal || media.id;
   const score = media.averageScore ? media.averageScore / 10 : media.meanScore ? media.meanScore / 10 : null;
   const poster = media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '/banner-placeholder.webp';

@@ -8,9 +8,9 @@ import { AnimeFilterState } from '../../lib/types/anime';
 import { SearchBar } from '../../components/anime/SearchBar';
 import { FilterSidebar } from '../../components/anime/FilterSidebar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
-import { TrailerModal } from '../../components/anime/TrailerModal';
 import { AnimeCardSkeleton } from '../../components/ui/Skeleton';
 import { Sheet } from '../../components/ui/Sheet';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { Filter, SlidersHorizontal, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function SearchContent() {
@@ -51,7 +51,7 @@ function SearchContent() {
   }, [searchParams]);
 
   // Execute API Query with dynamic cache key for genre and filters
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['searchAnime', filters.genre, filters.q, filters.type, filters.status, filters.rating, filters.orderBy, filters.sort, page],
     queryFn: () => searchAnime(filters, page, 24),
     staleTime: 1000 * 60 * 5, // 5 mins
@@ -143,15 +143,7 @@ function SearchContent() {
               ))}
             </div>
           ) : isError ? (
-            <div className="glass-panel p-8 rounded-3xl border border-white/10 text-center text-slate-400 space-y-3">
-              <p>Failed to load anime results. Rate limit or connection issue.</p>
-              <button
-                onClick={() => setPage(page)}
-                className="px-4 py-2 rounded-xl bg-[#FF2A5F] text-white font-bold text-xs"
-              >
-                Try Again
-              </button>
-            </div>
+            <ErrorState onRetry={() => refetch()} isRetrying={isFetching} />
           ) : data?.data && data.data.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {data.data.map((anime, index) => (

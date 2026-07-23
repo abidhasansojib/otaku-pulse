@@ -1,5 +1,6 @@
 import { rateLimitedFetch } from './rateLimiter';
 import { fetchAnimeBanner } from './kitsuClient';
+import { searchAniListByGenre } from './anilistFallback';
 import {
   searchAnimeAniList,
   getTopAnimeAniList,
@@ -393,8 +394,26 @@ export async function searchAnime(filters: Partial<AnimeFilterState>, page = 1, 
 // Dedicated Genre Search Function (GET /anime?genres={genreId})
 export async function searchAnimeByGenre(genreId: number | string, page = 1, limit = 24): Promise<JikanResponse<AnimeItem[]>> {
   const numericId = resolveGenreId(genreId.toString());
-  if (!numericId) {
-    return { data: [], pagination: { last_visible_page: 1, has_next_page: false } };
+  const genreName = resolveGenreName(genreId.toString());
+
+  try {
+    const jikanRes = await searchAnime({ genre: numericId ? numericId.toString() : genreId.toString(), orderBy: 'score', sort: 'desc' }, page, limit);
+    if (jikanRes && jikanRes.data && jikanRes.data.length > 0) {
+      return jikanRes;
+    }
+  } catch (err) {
+    // Fail over to AniList GraphQL genre search
   }
-  return searchAnime({ genre: numericId.toString(), orderBy: 'score', sort: 'desc' }, page, limit);
+
+  if (genreName) {
+    const aniListResults = await searchAniListByGenre(genreName, page);
+    if (aniListResults && aniListResults.length > 0) {
+      return {
+        data: deduplicateAnimeList(aniListResults),
+        pagination: { last_visible_page: 5, has_next_page: aniListResults.length >= limit },
+      };
+    }
+  }
+
+  return { data: [], pagination: { last_visible_page: 1, has_next_page: false } };
 }

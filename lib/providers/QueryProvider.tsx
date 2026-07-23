@@ -13,6 +13,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             gcTime: 120 * 60 * 1000, // 2 hours garbage collection
             refetchOnWindowFocus: false,
             retry: 2,
+            retryDelay: 1500,
           },
         },
       })
