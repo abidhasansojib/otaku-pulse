@@ -8,6 +8,7 @@ import { AnimeFilterState } from '../../lib/types/anime';
 import { SearchBar } from '../../components/anime/SearchBar';
 import { FilterSidebar } from '../../components/anime/FilterSidebar';
 import { AnimeCard } from '../../components/anime/AnimeCard';
+import { TrailerModal } from '../../components/anime/TrailerModal';
 import { AnimeCardSkeleton } from '../../components/ui/Skeleton';
 import { Sheet } from '../../components/ui/Sheet';
 import { ErrorState } from '../../components/ui/ErrorState';

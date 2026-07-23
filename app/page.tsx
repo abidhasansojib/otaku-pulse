@@ -67,7 +67,7 @@ export default function HomePage() {
           {genres?.slice(0, 14).map((g) => (
             <Link
               key={g.mal_id}
-              href={`/search?genre=${g.mal_id}`}
+              href={`/search?genre=${encodeURIComponent(g.name)}`}
               className="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-[#FF2A5F] text-slate-300 hover:text-white border border-white/10 text-xs font-semibold transition-all hover:scale-105"
             >
               {g.name}
