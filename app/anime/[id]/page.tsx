@@ -441,7 +441,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
           <AnimeCharacters animeId={numericAnimeId} />
 
           {/* HD Artwork Gallery */}
-          <HDArtworkGallery animeId={numericAnimeId} title={title} />
+          <HDArtworkGallery anime={anime} />
 
           {/* Community Reviews Section */}
           <AnimeReviews animeId={numericAnimeId} />
