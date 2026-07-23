@@ -122,9 +122,9 @@ export function AnimeCard({ anime, rank, onPlayTrailer }: AnimeCardProps) {
         {/* Genres Pill List */}
         {anime.genres && anime.genres.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-1">
-            {anime.genres.slice(0, 2).map((genre) => (
+            {anime.genres.slice(0, 2).map((genre, gIdx) => (
               <span
-                key={genre.mal_id}
+                key={`card-genre-${genre.mal_id}-${gIdx}`}
                 className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-white/5"
               >
                 {genre.name}

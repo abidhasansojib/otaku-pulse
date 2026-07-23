@@ -1,17 +1,35 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Sparkles, Search, Bookmark, Flame, Home, Compass } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Sparkles, Search, Bookmark, Flame, Home, Compass, Dices, Calendar } from 'lucide-react';
 import { useFavorites } from '../../lib/hooks/useFavorites';
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { favorites } = useFavorites();
+  const [isRandomLoading, setIsRandomLoading] = useState(false);
+
+  const handleRandomAnime = async () => {
+    setIsRandomLoading(true);
+    try {
+      const res = await fetch('https://api.jikan.moe/v4/random/anime');
+      const json = await res.json();
+      if (json?.data?.mal_id) {
+        router.push(`/anime/${json.data.mal_id}`);
+      }
+    } catch (err) {
+      router.push('/anime/38826');
+    } finally {
+      setIsRandomLoading(false);
+    }
+  };
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
+    { href: '/seasons', label: 'Seasonal Hub', icon: Calendar },
     { href: '/search', label: 'Explore & Search', icon: Compass },
     { href: '/search?sort=desc&orderBy=score', label: 'Top Rankings', icon: Flame },
     { href: '/favorites', label: 'Favorites', icon: Bookmark, badge: favorites.length },
@@ -30,7 +48,7 @@ export function Header() {
               OTAKU<span className="text-[#FF2A5F]">PULSE</span>
             </span>
             <span className="text-[9px] uppercase tracking-widest text-slate-400 font-semibold -mt-1">
-              Cyber Anime Hub
+              search anime
             </span>
           </div>
         </Link>
@@ -63,8 +81,18 @@ export function Header() {
           })}
         </nav>
 
-        {/* Quick Actions */}
-        <div className="flex items-center gap-3">
+        {/* Quick Actions & Random Anime Button */}
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={handleRandomAnime}
+            disabled={isRandomLoading}
+            className="px-3.5 py-2 rounded-full bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md hover:scale-105 transition-all disabled:opacity-50"
+            title="Route to a random anime"
+          >
+            <Dices className={`w-4 h-4 ${isRandomLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Surprise Me</span>
+          </button>
+
           <Link
             href="/search"
             className="p-2.5 rounded-full bg-slate-800/80 border border-white/10 text-slate-300 hover:text-white hover:border-[#FF2A5F]/50 transition-all"

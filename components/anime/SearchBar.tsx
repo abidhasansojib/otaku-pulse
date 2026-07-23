@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, X, Loader2, Star, ArrowRight } from 'lucide-react';
-import { searchAnime } from '../../lib/api/jikanClient';
+import { searchAnimeAniList } from '../../lib/api/anilistClient';
 import { AnimeItem } from '../../lib/types/anime';
 
 interface SearchBarProps {
@@ -21,7 +21,7 @@ export function SearchBar({ initialValue = '', onSearchSubmit }: SearchBarProps)
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Debounced predictive search effect
+  // Debounced predictive search effect using high-speed AniList GraphQL
   useEffect(() => {
     if (!query.trim() || query.length < 2) {
       setResults([]);
@@ -35,14 +35,15 @@ export function SearchBar({ initialValue = '', onSearchSubmit }: SearchBarProps)
 
     const handler = setTimeout(async () => {
       try {
-        const res = await searchAnime({ q: query }, 1, 5);
-        setResults(res.data || []);
+        const aniListResults = await searchAnimeAniList(query, 1, 5);
+        setResults(aniListResults || []);
       } catch (err) {
-        console.error('Predictive search error:', err);
+        // Silently fallback without breaking UI
+        setResults([]);
       } finally {
         setIsLoading(false);
       }
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(handler);
   }, [query]);
@@ -112,13 +113,13 @@ export function SearchBar({ initialValue = '', onSearchSubmit }: SearchBarProps)
                 Top Suggestions
               </div>
 
-              {results.map((anime) => {
+              {results.map((anime, idx) => {
                 const title = anime.title_english || anime.title;
                 const poster = anime.images?.webp?.small_image_url || anime.images?.jpg?.small_image_url;
 
                 return (
                   <Link
-                    key={anime.mal_id}
+                    key={`pred-${anime.mal_id}-${idx}`}
                     href={`/anime/${anime.mal_id}`}
                     onClick={() => setIsOpen(false)}
                     className="p-3 flex items-center gap-3 hover:bg-white/5 transition-colors group"

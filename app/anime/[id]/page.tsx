@@ -3,15 +3,17 @@
 import React, { useState, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-[#react-query]' || '@tanstack/react-query';
-import { getAnimeById, getAnimeDubMatrix } from '../../../lib/api/jikanClient';
-import { DubMatrix } from '../../../components/anime/DubMatrix';
-import { RelationsTimeline } from '../../../components/anime/RelationsTimeline';
+import { useQuery } from '@tanstack/react-query';
+import { getAnimeById } from '../../../lib/api/jikanClient';
+import { HDArtworkGallery } from '../../../components/anime/HDArtworkGallery';
+import { AnimeCharacters } from '../../../components/anime/AnimeCharacters';
+import { AnimeRecommendations } from '../../../components/anime/AnimeRecommendations';
+import { AnimeReviews } from '../../../components/anime/AnimeReviews';
 import { TrailerModal } from '../../../components/anime/TrailerModal';
 import { Badge } from '../../../components/ui/Badge';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { useFavorites } from '../../../lib/hooks/useFavorites';
-import { Star, Play, Bookmark, Download, ChevronDown, ChevronUp, ExternalLink, Calendar, Tv, Building, BookOpen, Volume2, ArrowLeft } from 'lucide-react';
+import { Star, Play, Bookmark, Download, ChevronDown, ChevronUp, ExternalLink, Calendar, Tv, Building, BookOpen, ArrowLeft } from 'lucide-react';
 
 export default function AnimeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -26,13 +28,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
     queryKey: ['animeDetail', animeId],
     queryFn: () => getAnimeById(animeId),
     enabled: !!animeId,
-  });
-
-  // Fetch Dub Matrix Data
-  const { data: dubMatrix } = useQuery({
-    queryKey: ['dubMatrix', animeId],
-    queryFn: () => (anime ? getAnimeDubMatrix(anime) : Promise.resolve([])),
-    enabled: !!anime,
+    staleTime: 1000 * 60 * 30, // 30 minutes cache
   });
 
   if (isLoading) {
@@ -49,9 +45,9 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
 
   if (!anime) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4 px-4">
         <h2 className="text-2xl font-bold text-white">Anime Not Found</h2>
-        <p className="text-slate-400 text-sm">The requested anime could not be fetched or does not exist.</p>
+        <p className="text-slate-400 text-sm max-w-md">The requested anime details could not be loaded. Please try returning to discover or searching another title.</p>
         <Link href="/" className="px-6 py-2.5 rounded-xl bg-[#FF2A5F] text-white font-bold text-xs">
           Return to Home
         </Link>
@@ -86,7 +82,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8 sm:space-y-10 min-w-0 overflow-hidden">
       {/* Back Button */}
       <div className="flex items-center justify-between">
         <Link
@@ -98,32 +94,33 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* Hero Header Banner */}
-      <div className="relative w-full h-[320px] md:h-[420px] rounded-3xl overflow-hidden glass-panel border border-white/15 shadow-2xl">
+      <div className="relative w-full h-[280px] sm:h-[360px] md:h-[420px] rounded-3xl overflow-hidden glass-panel border border-white/15 shadow-2xl">
         <Image
           src={backdropUrl}
           alt={title}
           fill
           priority
+          sizes="(max-width: 768px) 100vw, 1200px"
           className="object-cover brightness-60"
           unoptimized
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-[#0B0F19]/50 to-transparent" />
 
         {/* Hero Actions Bottom Bar */}
-        <div className="absolute bottom-6 left-6 right-6 z-10 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 right-4 sm:right-6 z-10 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             {trailerEmbed && (
               <button
                 onClick={() => setIsTrailerOpen(true)}
-                className="px-6 py-3 rounded-2xl bg-[#FF2A5F] hover:bg-[#E01E4F] text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-[#FF2A5F]/40 transition-all hover:scale-102"
+                className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-2xl bg-[#FF2A5F] hover:bg-[#E01E4F] text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xl shadow-[#FF2A5F]/40 transition-all hover:scale-102"
               >
-                <Play className="w-4 h-4 fill-white" /> Play Official Trailer
+                <Play className="w-4 h-4 fill-white" /> Official Trailer
               </button>
             )}
 
             <button
               onClick={() => toggleFavorite(anime)}
-              className={`px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all ${
+              className={`px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all ${
                 bookmarked
                   ? 'bg-[#FF2A5F] text-white shadow-lg shadow-[#FF2A5F]/30'
                   : 'glass-panel text-white hover:bg-white/10 border border-white/20'
@@ -136,7 +133,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
 
           <button
             onClick={handleDownloadBanner}
-            className="px-4 py-3 rounded-2xl glass-panel text-slate-200 hover:text-white border border-white/20 text-xs font-semibold flex items-center gap-2 transition-colors"
+            className="px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl glass-panel text-slate-200 hover:text-white border border-white/20 text-xs font-semibold flex items-center gap-2 transition-colors"
           >
             <Download className="w-4 h-4 text-[#8A2BE2]" /> Save HD Artwork
           </button>
@@ -144,15 +141,17 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* Main Content Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Poster & Quick Metadata */}
-        <div className="space-y-6">
-          <div className="relative aspect-[3/4] w-full max-w-sm mx-auto rounded-3xl overflow-hidden glass-panel border border-white/15 shadow-2xl">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-w-0">
+        {/* Left Column: Poster & Native Jikan Specifications */}
+        <div className="space-y-6 min-w-0">
+          <div className="relative aspect-[3/4] w-full max-w-xs sm:max-w-sm mx-auto rounded-3xl overflow-hidden glass-panel border border-white/15 shadow-2xl">
             <Image
               src={posterUrl}
               alt={title}
               fill
+              sizes="(max-width: 640px) 280px, 380px"
               className="object-cover"
+              loading="lazy"
               unoptimized
             />
             {anime.airing && (
@@ -162,59 +161,64 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
             )}
           </div>
 
-          {/* Metadata Card */}
-          <div className="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+          {/* Specifications Card */}
+          <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-white/10 space-y-4 min-w-0">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-white/10 pb-3">
               Anime Specifications
             </h3>
 
             <div className="space-y-3 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 flex items-center gap-1.5"><Star className="w-3.5 h-3.5 text-[#FF2A5F]" /> MAL Score</span>
-                <span className="font-bold text-[#FF2A5F]">{score} ({anime.scored_by?.toLocaleString() || '0'} votes)</span>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-slate-400 flex items-center gap-1.5 shrink-0"><Star className="w-3.5 h-3.5 text-[#FF2A5F]" /> MAL Score</span>
+                <span className="font-bold text-[#FF2A5F] truncate">{score} ({anime.scored_by?.toLocaleString() || '0'})</span>
               </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 flex items-center gap-1.5"><Tv className="w-3.5 h-3.5 text-[#8A2BE2]" /> Format</span>
-                <span className="font-bold text-white">{anime.type || 'TV'}</span>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-slate-400 flex items-center gap-1.5 shrink-0"><Tv className="w-3.5 h-3.5 text-[#8A2BE2]" /> Format</span>
+                <span className="font-bold text-white truncate">{anime.type || 'TV'}</span>
               </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-emerald-400" /> Episodes</span>
-                <span className="font-bold text-white">{anime.episodes || 'Ongoing'} ({anime.duration || '24m'})</span>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-slate-400 flex items-center gap-1.5 shrink-0"><Calendar className="w-3.5 h-3.5 text-emerald-400" /> Episodes</span>
+                <span className="font-bold text-white truncate">{anime.episodes || 'Ongoing'} ({anime.duration || '24m'})</span>
               </div>
 
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 flex items-center gap-1.5"><Building className="w-3.5 h-3.5 text-amber-400" /> Studio</span>
-                <span className="font-bold text-white">{anime.studios?.[0]?.name || 'Unknown'}</span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5 text-sky-400" /> Source</span>
-                <span className="font-bold text-white">{anime.source || 'Manga'}</span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 flex items-center gap-1.5"><Volume2 className="w-3.5 h-3.5 text-[#C77DFF]" /> Audio Dub</span>
-                <span className="font-bold text-[#C77DFF]">Japanese / English</span>
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-slate-400 flex items-center gap-1.5 shrink-0"><BookOpen className="w-3.5 h-3.5 text-sky-400" /> Source</span>
+                <span className="font-bold text-white truncate">{anime.source || 'Original'}</span>
               </div>
             </div>
 
-            {/* External Links */}
-            {anime.external && anime.external.length > 0 && (
-              <div className="pt-3 border-t border-white/10">
-                <span className="text-[11px] text-slate-400 font-semibold block mb-2">Streaming & Database</span>
+            {/* Clickable Studios & Producers */}
+            {anime.studios && anime.studios.length > 0 && (
+              <div className="pt-3 border-t border-white/10 space-y-1.5">
+                <span className="text-[11px] text-slate-400 font-semibold block">Animation Studios:</span>
                 <div className="flex flex-wrap gap-1.5">
-                  {anime.external.slice(0, 4).map((ext, idx) => (
-                    <a
-                      key={idx}
-                      href={ext.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2.5 py-1 rounded-lg bg-slate-900/80 border border-white/10 text-[10px] text-slate-300 hover:text-white hover:border-[#FF2A5F] flex items-center gap-1 transition-colors"
+                  {anime.studios.map((st, idx) => (
+                    <Link
+                      key={`studio-${st.mal_id || 'st'}-${idx}`}
+                      href={`/search?q=${encodeURIComponent(st.name)}`}
+                      className="px-2.5 py-1 rounded-xl bg-slate-900 border border-white/10 text-[11px] font-bold text-white hover:border-[#FF2A5F] transition-colors"
                     >
-                      {ext.name} <ExternalLink className="w-3 h-3 text-[#FF2A5F]" />
-                    </a>
+                      {st.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {anime.producers && anime.producers.length > 0 && (
+              <div className="pt-2 border-t border-white/10 space-y-1.5">
+                <span className="text-[11px] text-slate-400 font-semibold block">Producers & Companies:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {anime.producers.slice(0, 4).map((pr, idx) => (
+                    <Link
+                      key={`producer-${idx}`}
+                      href={`/search?q=${encodeURIComponent(pr.name)}`}
+                      className="px-2.5 py-1 rounded-xl bg-slate-900/60 border border-white/5 text-[10px] text-slate-300 hover:text-white hover:border-[#8A2BE2] transition-colors"
+                    >
+                      {pr.name}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -222,32 +226,32 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
 
-        {/* Right Column: Title, Synopsis, Dub Matrix & Relations */}
-        <div className="lg:col-span-2 space-y-8">
+        {/* Right Column: Title, Synopsis, Characters, HD Gallery, Recommendations & Reviews */}
+        <div className="lg:col-span-2 space-y-6 sm:space-y-8 min-w-0">
           {/* Header Info */}
-          <div className="space-y-3">
+          <div className="space-y-3 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              {anime.genres?.map((g) => (
-                <Badge key={g.mal_id} variant="secondary" size="md">{g.name}</Badge>
+              {anime.genres?.map((g, idx) => (
+                <Badge key={`genre-${g.mal_id || 'gn'}-${idx}`} variant="secondary" size="md">{g.name}</Badge>
               ))}
               {anime.rating && <Badge variant="outline" size="md">{anime.rating}</Badge>}
             </div>
 
-            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight break-words min-w-0">
               {title}
             </h1>
 
             {japaneseTitle && (
-              <p className="text-sm font-semibold text-slate-400 flex items-center gap-2">
+              <p className="text-xs sm:text-sm font-semibold text-slate-400 flex items-center gap-2 break-words">
                 <span>Japanese: {japaneseTitle}</span>
               </p>
             )}
           </div>
 
           {/* Plot & Synopsis */}
-          <div className="glass-panel p-6 rounded-3xl border border-white/10 space-y-3">
-            <h3 className="text-lg font-bold text-white">Plot Overview & Synopsis</h3>
-            <p className={`text-sm text-slate-300 leading-relaxed ${!isSynopsisExpanded ? 'line-clamp-4' : ''}`}>
+          <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-white/10 space-y-3 min-w-0">
+            <h3 className="text-base sm:text-lg font-bold text-white">Plot Overview & Synopsis</h3>
+            <p className={`text-xs sm:text-sm text-slate-300 leading-relaxed break-words ${!isSynopsisExpanded ? 'line-clamp-4' : ''}`}>
               {anime.synopsis || 'No detailed synopsis available for this title.'}
             </p>
             {anime.synopsis && anime.synopsis.length > 280 && (
@@ -264,15 +268,21 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
             )}
           </div>
 
-          {/* Dub Matrix Section */}
-          <DubMatrix matrix={dubMatrix || []} />
+          {/* Main Cast & Voice Actors (Seiyuu) */}
+          <AnimeCharacters animeId={anime.mal_id} />
 
-          {/* Franchise Timeline Tree */}
-          <RelationsTimeline relations={anime.relations} />
+          {/* HD Artwork & Wallpaper Center */}
+          <HDArtworkGallery anime={anime} />
+
+          {/* User Recommendations */}
+          <AnimeRecommendations animeId={anime.mal_id} />
+
+          {/* Community Reviews */}
+          <AnimeReviews animeId={anime.mal_id} />
         </div>
       </div>
 
-      {/* Trailer Modal */}
+      {/* Lazy Loaded Trailer Modal */}
       <TrailerModal
         isOpen={isTrailerOpen}
         onClose={() => setIsTrailerOpen(false)}

@@ -99,6 +99,8 @@ export interface AnimeItem {
   relations?: AnimeRelation[];
   external?: AnimeExternalLink[];
   streaming?: AnimeExternalLink[];
+  licensors?: AnimeExternalLink[];
+  producers?: AnimeExternalLink[];
   // Enhanced Banner fallback URL computed at runtime
   banner_url?: string;
 }
@@ -119,16 +121,18 @@ export interface JikanResponse<T> {
   pagination?: JikanPagination;
 }
 
+export interface LanguageAvailability {
+  language: string;
+  isOriginal?: boolean;
+  available: boolean;
+  note?: string;
+}
+
 export interface DubSeasonInfo {
   seasonName: string;
   animeId: number;
   title: string;
-  languages: {
-    language: string;
-    isOriginal?: boolean;
-    available: boolean;
-    note?: string;
-  }[];
+  languages: LanguageAvailability[];
 }
 
 export interface AnimeFilterState {

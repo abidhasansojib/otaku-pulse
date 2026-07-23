@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { getHeroFeaturedAnime, getTopAnime, getCurrentSeasonAnime } from '../lib/api/jikanClient';
+import { getHeroFeaturedAnime, getTopAnime, getCurrentSeasonAnime, getAnimeGenres } from '../lib/api/jikanClient';
 import { HeroCarousel } from '../components/anime/HeroCarousel';
 import { RankTable } from '../components/anime/RankTable';
 import { SeasonalCarousel } from '../components/anime/SeasonalCarousel';
 import { TrailerModal } from '../components/anime/TrailerModal';
 import { HeroSkeleton, AnimeCardSkeleton } from '../components/ui/Skeleton';
 import { SearchBar } from '../components/anime/SearchBar';
-import { Flame, Trophy } from 'lucide-react';
+import { Flame, Trophy, Compass, Sparkles } from 'lucide-react';
 
 export default function HomePage() {
   const [activeTrailer, setActiveTrailer] = useState<{ url: string; title: string } | null>(null);
@@ -38,6 +39,13 @@ export default function HomePage() {
     queryFn: () => getCurrentSeasonAnime(15),
   });
 
+  // Fetch Official Genres (GET /genres/anime)
+  const { data: genres } = useQuery({
+    queryKey: ['animeGenresList'],
+    queryFn: getAnimeGenres,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
+  });
+
   const handlePlayTrailer = (url: string, title: string) => {
     setActiveTrailer({ url, title });
   };
@@ -45,9 +53,34 @@ export default function HomePage() {
   return (
     <div className="space-y-12">
       {/* Search Bar Section */}
-      <div className="flex flex-col items-center justify-center pt-2 pb-4 space-y-3 text-center">
+      <div className="flex flex-col items-center justify-center pt-2 pb-2 space-y-3 text-center">
         <SearchBar />
       </div>
+
+      {/* Explore by Genre Pill Navbar/Grid */}
+      <section aria-label="Explore by Genre" className="glass-panel p-4 rounded-3xl border border-white/10 space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <Compass className="w-4 h-4 text-[#FF2A5F]" />
+          <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">Explore by Genre</h3>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {genres?.slice(0, 14).map((g) => (
+            <Link
+              key={g.mal_id}
+              href={`/search?genre=${g.mal_id}`}
+              className="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-[#FF2A5F] text-slate-300 hover:text-white border border-white/10 text-xs font-semibold transition-all hover:scale-105"
+            >
+              {g.name}
+            </Link>
+          ))}
+          <Link
+            href="/search"
+            className="px-3 py-1.5 rounded-full bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white text-xs font-bold transition-all hover:scale-105"
+          >
+            All Genres & Filter →
+          </Link>
+        </div>
+      </section>
 
       {/* Hero Carousel Section */}
       <section aria-label="Featured Spotlight">

@@ -50,10 +50,11 @@ function SearchContent() {
     });
   }, [searchParams]);
 
-  // Execute API Query
+  // Execute API Query with dynamic cache key for genre and filters
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['searchAnime', filters, page],
+    queryKey: ['searchAnime', filters.genre, filters.q, filters.type, filters.status, filters.rating, filters.orderBy, filters.sort, page],
     queryFn: () => searchAnime(filters, page, 24),
+    staleTime: 1000 * 60 * 5, // 5 mins
   });
 
   const handleFilterChange = (newFilters: Partial<AnimeFilterState>) => {
@@ -153,9 +154,9 @@ function SearchContent() {
             </div>
           ) : data?.data && data.data.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {data.data.map((anime) => (
+              {data.data.map((anime, index) => (
                 <AnimeCard
-                  key={anime.mal_id}
+                  key={`search-card-${anime.mal_id}-${index}`}
                   anime={anime}
                   onPlayTrailer={(url, title) => setActiveTrailer({ url, title })}
                 />

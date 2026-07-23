@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Filter, RefreshCw, Volume2 } from 'lucide-react';
+import { Filter, RefreshCw } from 'lucide-react';
 import { AnimeFilterState } from '../../lib/types/anime';
 
 interface FilterSidebarProps {
@@ -62,20 +62,6 @@ export function FilterSidebar({ filters, onChange, onReset }: FilterSidebarProps
         >
           <RefreshCw className="w-3 h-3" /> Reset
         </button>
-      </div>
-
-      {/* Dub Availability Filter */}
-      <div className="p-3 rounded-2xl bg-[#8A2BE2]/10 border border-[#8A2BE2]/30 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Volume2 className="w-4 h-4 text-[#C77DFF]" />
-          <span className="text-xs font-bold text-white">English Dub Only</span>
-        </div>
-        <input
-          type="checkbox"
-          checked={filters.dubOnly}
-          onChange={(e) => onChange({ dubOnly: e.target.checked })}
-          className="w-4 h-4 accent-[#FF2A5F] rounded cursor-pointer"
-        />
       </div>
 
       {/* Genre Filter */}

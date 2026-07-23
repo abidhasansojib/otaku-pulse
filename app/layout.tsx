@@ -7,7 +7,7 @@ import { Footer } from '../components/layout/Footer';
 
 export const metadata: Metadata = {
   title: 'OtakuPulse | Enterprise Anime Discovery & Dub Matrix',
-  description: 'Explore top rated anime, real-time search, global rankings, trailer previews, and multi-language dub availability matrices.',
+  description: 'Explore top rated anime, real-time search, global rankings, trailer previews, watch order guides, and multi-language dub availability matrices.',
   icons: {
     icon: '/favicon.ico',
     shortcut: '/logo.png',

@@ -98,7 +98,7 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading, onP
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {currentData.slice(0, 15).map((anime, index) => (
                 <AnimeCard
-                  key={anime.mal_id}
+                  key={`rank-grid-${anime.mal_id}-${index}`}
                   anime={anime}
                   rank={index + 1}
                   onPlayTrailer={onPlayTrailer}
@@ -127,7 +127,7 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading, onP
 
                     return (
                       <tr
-                        key={anime.mal_id}
+                        key={`rank-row-${anime.mal_id}-${index}`}
                         className="hover:bg-white/[0.03] transition-colors group"
                       >
                         {/* Rank */}

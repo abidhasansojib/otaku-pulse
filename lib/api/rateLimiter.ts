@@ -12,8 +12,7 @@ class RateLimiterQueue {
   private requestTimestamps: number[] = [];
   private cache = new Map<string, Promise<any>>();
 
-  public async enqueue<T>(url: string, fetchFn: () => Promise<T>, maxRetries = 3): Promise<T> {
-    // Return existing cached promise if request is currently pending
+  public async enqueue<T>(url: string, fetchFn: () => Promise<T>, maxRetries = 1): Promise<T> {
     if (this.cache.has(url)) {
       return this.cache.get(url)!;
     }
@@ -38,7 +37,6 @@ class RateLimiterQueue {
     if (this.queue.length === 0) return;
 
     const now = Date.now();
-    // Keep only timestamps from the last 1000ms
     this.requestTimestamps = this.requestTimestamps.filter((t) => now - t < 1000);
 
     if (this.requestTimestamps.length >= this.maxPerSecond) {
@@ -58,11 +56,11 @@ class RateLimiterQueue {
       const result = await item.fn();
       item.resolve(result);
     } catch (err: any) {
-      // If 429 Rate Limit error, re-queue with backoff delay
       const is429 = err?.status === 429 || (err?.message && err.message.includes('429'));
-      if (is429 && item.retries > 0) {
-        const backoffDelay = (4 - item.retries) * 1500; // 1.5s, 3s, 4.5s
-        console.warn(`[RateLimiter] HTTP 429 hit. Retrying in ${backoffDelay}ms... (${item.retries} retries left)`);
+      const is500 = err?.status >= 500 || (err?.message && (err.message.includes('504') || err.message.includes('502')));
+
+      if ((is429 || is500) && item.retries > 0) {
+        const backoffDelay = 800;
         setTimeout(() => {
           this.queue.unshift({
             ...item,
@@ -84,21 +82,38 @@ export const rateLimiter = new RateLimiterQueue();
 
 export async function rateLimitedFetch<T>(url: string, options?: RequestInit): Promise<T> {
   return rateLimiter.enqueue(url, async () => {
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        'Accept': 'application/json',
-        ...options?.headers,
-      },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4-second timeout limit
 
-    if (!res.ok) {
-      const error: any = new Error(`HTTP Error ${res.status}: ${res.statusText}`);
-      error.status = res.status;
-      throw error;
+    try {
+      const res = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          ...options?.headers,
+        },
+        next: { revalidate: 86400 },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const error: any = new Error(`HTTP Error ${res.status}: ${res.statusText}`);
+        error.status = res.status;
+        throw error;
+      }
+
+      const data = await res.json();
+      return data as T;
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        const timeoutError: any = new Error('HTTP 504 Timeout');
+        timeoutError.status = 504;
+        throw timeoutError;
+      }
+      throw err;
     }
-
-    const data = await res.json();
-    return data as T;
   });
 }

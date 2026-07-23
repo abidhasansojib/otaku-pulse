@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { AnimeItem } from '../types/anime';
 
-const STORAGE_KEY = 'otaku_pulse_favorites';
+const STORAGE_KEY = 'anidex_favorites';
+const OLD_STORAGE_KEY = 'otaku_pulse_favorites';
 
 export function useFavorites() {
   const [favorites, setFavorites] = useState<AnimeItem[]>([]);
@@ -11,7 +12,7 @@ export function useFavorites() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(OLD_STORAGE_KEY);
       if (saved) {
         setFavorites(JSON.parse(saved));
       }

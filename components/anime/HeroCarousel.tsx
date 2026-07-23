@@ -48,7 +48,7 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
       {/* Background Image Carousel with Fade Animation */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={currentAnime.mal_id}
+          key={`hero-slide-${currentAnime.mal_id}-${currentIndex}`}
           initial={{ opacity: 0, scale: 1.05 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
@@ -101,8 +101,8 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
         {/* Genre Pills */}
         {currentAnime.genres && (
           <div className="flex flex-wrap gap-2 pt-1">
-            {currentAnime.genres.slice(0, 4).map((g) => (
-              <span key={g.mal_id} className="text-xs px-3 py-1 rounded-full bg-slate-900/80 text-slate-200 border border-white/10">
+            {currentAnime.genres.slice(0, 4).map((g, idx) => (
+              <span key={`hero-genre-${g.mal_id}-${idx}`} className="text-xs px-3 py-1 rounded-full bg-slate-900/80 text-slate-200 border border-white/10">
                 {g.name}
               </span>
             ))}

@@ -61,9 +61,9 @@ export function SeasonalCarousel({ items, onPlayTrailer }: SeasonalCarouselProps
         className="flex gap-4 overflow-x-auto scrollbar-none pb-4 pt-1 snap-x snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {items.map((anime) => (
+        {items.map((anime, index) => (
           <div
-            key={anime.mal_id}
+            key={`seasonal-${anime.mal_id}-${index}`}
             className="w-[200px] sm:w-[220px] md:w-[240px] shrink-0 snap-start"
           >
             <AnimeCard anime={anime} onPlayTrailer={onPlayTrailer} />

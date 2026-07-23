@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Search, Trophy, Bookmark } from 'lucide-react';
+import { Home, Search, Calendar, Bookmark } from 'lucide-react';
 import { useFavorites } from '../../lib/hooks/useFavorites';
 
 export function MobileBottomNav() {
@@ -12,8 +12,8 @@ export function MobileBottomNav() {
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
+    { href: '/seasons', label: 'Seasons', icon: Calendar },
     { href: '/search', label: 'Search', icon: Search },
-    { href: '/search?orderBy=score&sort=desc', label: 'Rankings', icon: Trophy },
     { href: '/favorites', label: 'Favorites', icon: Bookmark, badge: favorites.length },
   ];
 

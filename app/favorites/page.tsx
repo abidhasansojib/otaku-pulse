@@ -50,9 +50,9 @@ export default function FavoritesPage() {
       {/* Favorites Grid or Empty State */}
       {favorites.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {favorites.map((anime) => (
+          {favorites.map((anime, idx) => (
             <AnimeCard
-              key={anime.mal_id}
+              key={`fav-${anime.mal_id}-${idx}`}
               anime={anime}
               onPlayTrailer={(url, title) => setActiveTrailer({ url, title })}
             />
