@@ -8,7 +8,7 @@ import { useFavorites } from '../../lib/hooks/useFavorites';
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const { favorites } = useFavorites();
+  const { favorites, isLoaded } = useFavorites();
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
@@ -34,7 +34,7 @@ export function MobileBottomNav() {
             >
               <div className="relative">
                 <Icon className="w-5 h-5" />
-                {item.badge !== undefined && item.badge > 0 && (
+                {isLoaded && item.badge !== undefined && item.badge > 0 && (
                   <span className="absolute -top-1.5 -right-2 px-1.5 text-[9px] font-bold bg-[#FF2A5F] text-white rounded-full">
                     {item.badge}
                   </span>

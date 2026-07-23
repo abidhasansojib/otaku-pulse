@@ -9,7 +9,7 @@ import { useFavorites } from '../../lib/hooks/useFavorites';
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const { favorites } = useFavorites();
+  const { favorites, isLoaded } = useFavorites();
   const [isRandomLoading, setIsRandomLoading] = useState(false);
 
   const handleRandomAnime = async () => {
@@ -66,12 +66,12 @@ export function Header() {
                 className={`relative px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all ${
                   isActive
                     ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white shadow-md shadow-[#FF2A5F]/20'
-                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                    : 'text-slate-300 hover:text-[#FF2A5F] hover:bg-white/5'
                 }`}
               >
                 <Icon className="w-4 h-4" />
                 <span>{item.label}</span>
-                {item.badge !== undefined && item.badge > 0 && (
+                {isLoaded && item.badge !== undefined && item.badge > 0 && (
                   <span className="ml-0.5 px-1.5 py-0.2 text-[10px] bg-white text-[#0B0F19] font-bold rounded-full">
                     {item.badge}
                   </span>
@@ -107,7 +107,7 @@ export function Header() {
             aria-label="View Favorites"
           >
             <Bookmark className="w-4 h-4" />
-            {favorites.length > 0 && (
+            {isLoaded && favorites.length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#FF2A5F] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                 {favorites.length}
               </span>
