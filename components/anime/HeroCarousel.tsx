@@ -45,6 +45,19 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
+      {/* Top Auto-slide Progress Bar */}
+      {!isPaused && (
+        <div className="absolute top-0 left-0 right-0 z-30 h-1 bg-white/10 overflow-hidden">
+          <motion.div
+            key={`hero-progress-${currentIndex}`}
+            initial={{ width: '0%' }}
+            animate={{ width: '100%' }}
+            transition={{ duration: 6, ease: 'linear' }}
+            className="h-full bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2]"
+          />
+        </div>
+      )}
+
       {/* Background Image Carousel with Fade Animation */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -69,7 +82,7 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Content Container (Sufficient Bottom Padding to Avoid Control Overlap) */}
+      {/* Content Container */}
       <div className="relative z-10 h-full max-w-4xl px-5 sm:px-8 md:px-12 flex flex-col justify-end pb-16 sm:pb-14 md:pb-16 space-y-3 sm:space-y-4">
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-2">
@@ -126,8 +139,8 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
         </div>
       </div>
 
-      {/* Navigation Arrows (Bottom-Middle on Mobile, Bottom-Right on Desktop with Zero Overlap) */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-auto md:right-6 md:bottom-5 z-30 flex items-center gap-1.5 sm:gap-2">
+      {/* Navigation & Thumbnail Preview Bar */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-auto md:right-6 md:bottom-5 z-30 flex items-center gap-2">
         <button
           onClick={() => setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1))}
           className="p-2 sm:p-2.5 rounded-full glass-panel text-white hover:bg-white/20 transition-colors border border-white/15 shadow-lg"
@@ -136,18 +149,27 @@ export function HeroCarousel({ items, onPlayTrailer }: HeroCarouselProps) {
           <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
-        {/* Indicators */}
-        <div className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full glass-panel border border-white/15 shadow-lg">
-          {items.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentIndex(idx)}
-              className={`h-1.5 sm:h-2 rounded-full transition-all ${
-                idx === currentIndex ? 'w-4 sm:w-6 bg-[#FF2A5F]' : 'w-1.5 sm:w-2 bg-slate-600'
-              }`}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
-          ))}
+        {/* Mini Poster Preview Indicators */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full glass-panel border border-white/15 shadow-lg">
+          {items.slice(0, 7).map((item, idx) => {
+            const isActive = idx === currentIndex;
+            const thumb = item.images?.webp?.small_image_url || item.images?.jpg?.small_image_url || '/banner-placeholder.webp';
+
+            return (
+              <button
+                key={idx}
+                onClick={() => setCurrentIndex(idx)}
+                className={`relative rounded-lg overflow-hidden transition-all duration-300 ${
+                  isActive
+                    ? 'w-7 h-9 ring-2 ring-[#FF2A5F] scale-110 shadow-md'
+                    : 'w-5 h-7 opacity-50 hover:opacity-100 hover:scale-105'
+                }`}
+                title={item.title_english || item.title}
+              >
+                <Image src={thumb} alt={item.title} fill className="object-cover" unoptimized />
+              </button>
+            );
+          })}
         </div>
 
         <button

@@ -106,6 +106,26 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-[#0B0F19]/50 to-transparent" />
 
+        {/* Floating Quick-Stats Overlay in Top Right */}
+        <div className="absolute top-4 right-4 z-10 hidden sm:flex items-center gap-2.5 px-4 py-2 rounded-2xl glass-panel border border-white/20 shadow-xl backdrop-blur-md">
+          {anime.score && (
+            <div className="flex items-center gap-1 text-xs font-extrabold text-[#FF2A5F]">
+              <Star className="w-3.5 h-3.5 fill-[#FF2A5F]" />
+              <span>MAL {score}</span>
+            </div>
+          )}
+          {anime.rank && (
+            <span className="text-xs font-bold text-slate-200 border-l border-white/15 pl-2.5">
+              Rank #{anime.rank}
+            </span>
+          )}
+          {anime.type && (
+            <span className="text-xs font-semibold text-purple-300 border-l border-white/15 pl-2.5">
+              {anime.type}
+            </span>
+          )}
+        </div>
+
         {/* Hero Actions Bottom Bar */}
         <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 right-4 sm:right-6 z-10 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5">

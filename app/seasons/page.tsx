@@ -21,16 +21,19 @@ export default function SeasonsPage() {
     staleTime: 1000 * 60 * 60 * 24, // 24 hours
   });
 
-  // Automatically select current season once seasonsList loads if not already selected
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Automatically select current season once seasonsList loads on initial mount
   useEffect(() => {
-    if (seasonsList && seasonsList.length > 0) {
+    if (!hasInitialized && seasonsList && seasonsList.length > 0) {
       const activeOption = seasonsList.find((s) => s.isCurrent);
       if (activeOption) {
         setSelectedYear(activeOption.year);
         setSelectedSeason(activeOption.season);
       }
+      setHasInitialized(true);
     }
-  }, [seasonsList]);
+  }, [seasonsList, hasInitialized]);
 
   // Fetch Seasonal Anime
   const { data: seasonalData, isLoading } = useQuery({
