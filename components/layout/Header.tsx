@@ -99,9 +99,10 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-1 bg-slate-900/60 p-1.5 rounded-full border border-white/10">
             {navItems.map((item) => {
               const Icon = item.icon;
+              const searchStr = typeof window !== 'undefined' ? window.location.search : '';
               const isActive =
                 item.href.includes('sort=')
-                  ? pathname + window?.location?.search === item.href
+                  ? pathname + searchStr === item.href
                   : pathname === item.href ||
                     (item.href !== '/' && pathname.startsWith(item.href));
 
