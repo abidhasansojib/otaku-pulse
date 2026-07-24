@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
-import { fetchNekosWallpapers, NekosImage } from '../../lib/api/nekosClient';
+import { fetchNekosWallpapers, NekosImage, NEKOS_CATEGORIES } from '../../lib/api/nekosClient';
 import {
   Sparkles,
   Download,
@@ -12,22 +12,39 @@ import {
   RefreshCw,
   Eye,
   ExternalLink,
-  ShieldCheck,
+  Search,
   Layers,
   X,
+  Heart,
+  Tag,
 } from 'lucide-react';
 
 export default function WallpapersPage() {
-  const [rating, setRating] = useState<'safe' | 'suggestive'>('safe');
+  const [category, setCategory] = useState<string>('waifu');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeQuery, setActiveQuery] = useState<string>('waifu');
   const [activeImage, setActiveImage] = useState<NekosImage | null>(null);
   const [copiedId, setCopiedId] = useState<string | number | null>(null);
 
-  // Fetch wallpapers using React Query
+  // Fetch wallpapers using React Query powered by nekos.best API + AniList
   const { data: wallpapers, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['nekosWallpapers', rating],
-    queryFn: () => fetchNekosWallpapers(rating, 24),
+    queryKey: ['nekosBestWallpapers', activeQuery],
+    queryFn: () => fetchNekosWallpapers(activeQuery, 24),
     staleTime: 1000 * 60 * 5, // 5 mins
   });
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setActiveQuery(searchQuery.trim());
+    }
+  };
+
+  const handleCategorySelect = (cat: string) => {
+    setCategory(cat);
+    setSearchQuery('');
+    setActiveQuery(cat);
+  };
 
   const handleCopyUrl = (url: string, id: string | number) => {
     navigator.clipboard.writeText(url);
@@ -42,7 +59,7 @@ export default function WallpapersPage() {
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `otakupulse-wallpaper-${id}.webp`;
+      link.download = `otakupulse-anime-wallpaper-${id}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -59,52 +76,86 @@ export default function WallpapersPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 z-10 relative">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF2A5F]/20 border border-[#FF2A5F]/30 text-[#FF2A5F] text-xs font-bold">
-              <Sparkles className="w-3.5 h-3.5" /> Powered by NekosAPI v4
+              <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Powered by Nekos.best API &amp; AniList HD
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Anime Wallpapers &amp; Artwork Gallery
+              Anime HD Wallpaper &amp; Artwork Hub
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-              Explore thousands of ultra-high-definition anime wallpapers, digital character art, and fan illustrations.
+              Discover, search, and download thousands of high-definition anime wallpapers, character art, and official key visuals.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {/* Rating Selector */}
-            <div className="flex items-center p-1 rounded-2xl bg-slate-950/80 border border-white/10 text-xs font-semibold">
+          {/* Shuffle Button */}
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="px-5 py-3 rounded-2xl bg-slate-900 border border-white/15 hover:border-[#FF2A5F] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg disabled:opacity-50 shrink-0"
+          >
+            <RefreshCw className={`w-4 h-4 text-[#FF2A5F] ${isFetching ? 'animate-spin' : ''}`} />
+            <span>Shuffle Wallpapers</span>
+          </button>
+        </div>
+
+        {/* Search Bar & Category Pills */}
+        <div className="mt-6 pt-6 border-t border-white/10 space-y-4">
+          <form onSubmit={handleSearchSubmit} className="relative max-w-2xl">
+            <div className="relative flex items-center">
+              <Search className="absolute left-4 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search wallpapers by anime title or keyword (e.g. Demon Slayer, Neko, Cyberpunk, Waifu)..."
+                className="w-full pl-11 pr-24 py-3 rounded-2xl bg-slate-950/80 border border-white/15 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#FF2A5F] transition-all"
+              />
               <button
-                onClick={() => setRating('safe')}
-                className={`px-4 py-2 rounded-xl transition-all ${
-                  rating === 'safe'
-                    ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-bold shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                type="submit"
+                className="absolute right-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white text-xs font-bold hover:scale-105 transition-transform"
               >
-                Safe Content
-              </button>
-              <button
-                onClick={() => setRating('suggestive')}
-                className={`px-4 py-2 rounded-xl transition-all ${
-                  rating === 'suggestive'
-                    ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-bold shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Suggestive
+                Search
               </button>
             </div>
+          </form>
 
-            {/* Shuffle Button */}
+          {/* Category Filter Badges */}
+          <div className="flex items-center gap-2 flex-wrap text-xs font-semibold">
+            <span className="text-slate-400 text-xs flex items-center gap-1 mr-1">
+              <Tag className="w-3.5 h-3.5 text-[#FF2A5F]" /> Categories:
+            </span>
+            {NEKOS_CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => handleCategorySelect(cat)}
+                className={`px-4 py-1.5 rounded-xl capitalize transition-all border ${
+                  activeQuery === cat
+                    ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white border-transparent shadow-md font-extrabold'
+                    : 'bg-slate-900/80 text-slate-300 border-white/10 hover:text-white hover:border-white/20'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
             <button
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="px-4 py-3 rounded-2xl bg-slate-900 border border-white/15 hover:border-[#FF2A5F] text-white text-xs font-bold flex items-center gap-2 transition-all shadow-lg disabled:opacity-50"
+              onClick={() => handleCategorySelect('official')}
+              className={`px-4 py-1.5 rounded-xl capitalize transition-all border ${
+                activeQuery === 'official'
+                  ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white border-transparent shadow-md font-extrabold'
+                  : 'bg-slate-900/80 text-slate-300 border-white/10 hover:text-white hover:border-white/20'
+              }`}
             >
-              <RefreshCw className={`w-4 h-4 text-[#FF2A5F] ${isFetching ? 'animate-spin' : ''}`} />
-              <span>Shuffle Artworks</span>
+              Official Series Banners
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Current Filter Indicator */}
+      <div className="flex items-center justify-between text-xs font-semibold text-slate-400 px-1">
+        <p>
+          Showing results for: <strong className="text-white capitalize">{activeQuery}</strong>
+        </p>
+        <p className="text-slate-400">{wallpapers?.length || 0} HD Wallpapers Loaded</p>
       </div>
 
       {/* Wallpapers Grid */}
@@ -117,8 +168,8 @@ export default function WallpapersPage() {
       ) : !wallpapers || wallpapers.length === 0 ? (
         <div className="glass-panel p-12 rounded-3xl border border-white/10 text-center text-slate-400 space-y-3">
           <Layers className="w-10 h-10 text-[#FF2A5F] mx-auto" />
-          <p className="text-sm font-bold text-white">No wallpapers found</p>
-          <p className="text-xs">Click shuffle to load fresh anime artworks from NekosAPI.</p>
+          <p className="text-sm font-bold text-white">No wallpapers found for &quot;{activeQuery}&quot;</p>
+          <p className="text-xs">Try searching another category like neko, waifu, kitsune or anime title.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -134,7 +185,7 @@ export default function WallpapersPage() {
               >
                 <Image
                   src={img.url}
-                  alt="Anime Wallpaper"
+                  alt={img.title || 'Anime Wallpaper'}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -149,7 +200,7 @@ export default function WallpapersPage() {
 
               {/* Wallpaper Card Info & Actions */}
               <div className="p-3.5 bg-slate-950/90 flex items-center justify-between gap-2 border-t border-white/5">
-                <div className="space-y-0.5 truncate">
+                <div className="space-y-0.5 truncate min-w-0">
                   <p className="text-xs font-bold text-white truncate" title={img.title || 'Anime Artwork'}>
                     {img.title || img.artist_name || 'Anime Artwork'}
                   </p>
@@ -207,7 +258,7 @@ export default function WallpapersPage() {
             <div className="relative w-full min-h-[300px] sm:min-h-[450px] bg-black flex items-center justify-center overflow-hidden">
               <Image
                 src={activeImage.url}
-                alt="High Res Wallpaper"
+                alt={activeImage.title || 'High Res Wallpaper'}
                 width={1920}
                 height={1080}
                 className="w-full h-full max-h-[65vh] object-contain"
@@ -217,13 +268,13 @@ export default function WallpapersPage() {
 
             {/* Lightbox Info Bar */}
             <div className="p-5 sm:p-6 bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-white/10">
-              <div className="space-y-1">
+              <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-black text-white">
-                    {activeImage.artist_name || 'Anime Wallpaper Artwork'}
+                  <h3 className="text-base font-black text-white truncate">
+                    {activeImage.title || activeImage.artist_name || 'Anime Wallpaper Artwork'}
                   </h3>
-                  <span className="px-2 py-0.5 rounded-md bg-[#FF2A5F]/20 text-[#FF2A5F] text-[10px] font-bold uppercase">
-                    {activeImage.rating}
+                  <span className="px-2 py-0.5 rounded-md bg-[#FF2A5F]/20 text-[#FF2A5F] text-[10px] font-bold uppercase shrink-0">
+                    HD Wallpaper
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -261,7 +312,7 @@ export default function WallpapersPage() {
                   onClick={() => handleDownload(activeImage.url, activeImage.id)}
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-extrabold text-xs shadow-lg shadow-[#FF2A5F]/25 flex items-center gap-2 hover:scale-105 transition-all"
                 >
-                  <Download className="w-4 h-4" /> Download High-Res
+                  <Download className="w-4 h-4" /> Download Original HD
                 </button>
               </div>
             </div>

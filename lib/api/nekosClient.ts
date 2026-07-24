@@ -6,28 +6,69 @@ export interface NekosImage {
   rating: 'safe' | 'suggestive' | 'erotica' | 'borderline' | string;
   type?: 'banner' | 'poster' | 'artwork';
   artist_name?: string | null;
+  artist_href?: string | null;
   tags?: string[];
   anime_id?: number;
   source_url?: string | null;
 }
 
+const NEKOS_BEST_BASE_URL = 'https://nekos.best/api/v2';
+export const NEKOS_CATEGORIES = ['neko', 'waifu', 'kitsune', 'husbando'] as const;
+
 /**
- * Fetch Genuine High-Resolution Anime Wallpapers & Artworks from AniList GraphQL + NekosAPI
+ * Fetch Anime Wallpapers & Artworks using official https://docs.nekos.best API + AniList GraphQL
  */
 export async function fetchNekosWallpapers(
-  rating: 'safe' | 'suggestive' = 'safe',
+  categoryOrQuery: string = 'waifu',
   limit: number = 24,
   page: number = 1
 ): Promise<NekosImage[]> {
   const wallpapers: NekosImage[] = [];
+  const normalizedQuery = categoryOrQuery.toLowerCase().trim();
 
-  // 1. Fetch Official High-Res Anime Wallpapers & Key Visuals from AniList GraphQL
+  // 1. Check if query matches a nekos.best category (neko, waifu, kitsune, husbando)
+  const isNekosCategory = NEKOS_CATEGORIES.includes(normalizedQuery as any);
+  const targetCategory = isNekosCategory ? normalizedQuery : 'waifu';
+
+  try {
+    const nekosRes = await fetch(`${NEKOS_BEST_BASE_URL}/${targetCategory}?amount=${limit}`, {
+      cache: 'no-store',
+    });
+
+    if (nekosRes.ok) {
+      const data = await nekosRes.json();
+      if (data?.results && Array.isArray(data.results)) {
+        data.results.forEach((item: any, idx: number) => {
+          if (item.url) {
+            wallpapers.push({
+              id: `nekosbest-${targetCategory}-${idx}-${Date.now()}`,
+              title: `${targetCategory.toUpperCase()} HD Anime Wallpaper #${idx + 1}`,
+              url: item.url,
+              thumbnail_url: item.url,
+              rating: 'safe',
+              type: 'artwork',
+              artist_name: item.artist_name || 'Pixiv Anime Artist',
+              artist_href: item.artist_href || null,
+              tags: [targetCategory, 'Anime', 'Wallpaper', 'HD Art'],
+              source_url: item.source_url || item.artist_href || null,
+            });
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch from nekos.best API:', err);
+  }
+
+  // 2. Fetch Official High-Res Anime Wallpapers & Key Visuals from AniList GraphQL
   try {
     const randomPage = Math.floor(Math.random() * 5) + 1;
+    const isCustomSearch = !isNekosCategory && normalizedQuery.length > 0;
+
     const query = `
-      query ($page: Int, $perPage: Int) {
+      query ($page: Int, $perPage: Int${isCustomSearch ? ', $search: String' : ''}) {
         Page(page: $page, perPage: $perPage) {
-          media(type: ANIME, sort: [POPULARITY_DESC, SCORE_DESC], isAdult: false) {
+          media(${isCustomSearch ? 'search: $search, ' : ''}type: ANIME, sort: [POPULARITY_DESC, SCORE_DESC], isAdult: false) {
             id
             title {
               userPreferred
@@ -45,14 +86,17 @@ export async function fetchNekosWallpapers(
       }
     `;
 
+    const variables: Record<string, any> = { page: randomPage, perPage: limit };
+    if (isCustomSearch) {
+      variables.search = normalizedQuery;
+      variables.page = 1;
+    }
+
     const res = await fetch('https://graphql.anilist.co', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query,
-        variables: { page: randomPage, perPage: limit },
-      }),
-      next: { revalidate: 60 },
+      body: JSON.stringify({ query, variables }),
+      next: { revalidate: 300 },
     });
 
     if (res.ok) {
@@ -63,32 +107,30 @@ export async function fetchNekosWallpapers(
         mediaList.forEach((item: any) => {
           const animeTitle = item.title?.english || item.title?.userPreferred || 'Anime';
 
-          // Add Official HD Banner Wallpaper
           if (item.bannerImage) {
             wallpapers.push({
               id: `anilist-banner-${item.id}`,
-              title: `${animeTitle} — Official HD Banner Wallpaper`,
+              title: `${animeTitle} — Official HD Widescreen Banner`,
               url: item.bannerImage,
               thumbnail_url: item.bannerImage,
               rating: 'safe',
               type: 'banner',
-              artist_name: 'Official Animation Studio',
+              artist_name: 'Official Anime Studio',
               tags: item.genres || ['Anime', 'Wallpaper'],
               anime_id: item.id,
               source_url: item.siteUrl,
             });
           }
 
-          // Add Extra Large Cover Poster Artwork
           if (item.coverImage?.extraLarge) {
             wallpapers.push({
               id: `anilist-cover-${item.id}`,
-              title: `${animeTitle} — Official Visual Poster`,
+              title: `${animeTitle} — Official Key Visual Poster`,
               url: item.coverImage.extraLarge,
               thumbnail_url: item.coverImage.large || item.coverImage.extraLarge,
               rating: 'safe',
               type: 'poster',
-              artist_name: 'Official Key Visual',
+              artist_name: 'Official Art',
               tags: item.genres || ['Anime', 'Poster'],
               anime_id: item.id,
               source_url: item.siteUrl,
@@ -98,39 +140,7 @@ export async function fetchNekosWallpapers(
       }
     }
   } catch (err) {
-    console.error('Failed to fetch AniList anime wallpapers:', err);
-  }
-
-  // 2. Query NekosAPI for extra anime illustrations
-  try {
-    const nekosRes = await fetch(
-      `https://api.nekosapi.com/v4/images/random?rating=${rating}&limit=12`,
-      { cache: 'no-store' }
-    );
-    if (nekosRes.ok) {
-      const nekosData = await nekosRes.json();
-      if (Array.isArray(nekosData)) {
-        nekosData.forEach((img: any, idx: number) => {
-          if (img.url) {
-            wallpapers.push({
-              id: `nekos-${img.id || idx}`,
-              title: `Anime Character Illustration #${idx + 1}`,
-              url: img.url,
-              thumbnail_url: img.sample_url || img.url,
-              rating: img.rating || rating,
-              type: 'artwork',
-              artist_name: img.artist_name || 'Anime Illustrator',
-              tags: Array.isArray(img.tags)
-                ? img.tags.map((t: any) => (typeof t === 'string' ? t : t.name || 'anime'))
-                : ['Anime', 'Artwork'],
-              source_url: img.source_url || null,
-            });
-          }
-        });
-      }
-    }
-  } catch (e) {
-    // Silent catch
+    console.error('Failed to fetch AniList GraphQL wallpapers:', err);
   }
 
   // Shuffle & Deduplicate wallpapers

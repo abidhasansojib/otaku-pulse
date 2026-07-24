@@ -101,6 +101,12 @@ export interface AnimeItem {
   streaming?: AnimeExternalLink[];
   licensors?: AnimeExternalLink[];
   producers?: AnimeExternalLink[];
+  // Ongoing Airing Episode tracking metadata
+  current_aired_episodes?: number | null;
+  nextAiringEpisode?: {
+    episode: number;
+    timeUntilAiring?: number;
+  } | null;
   // Enhanced Banner fallback URL computed at runtime
   banner_url?: string;
 }

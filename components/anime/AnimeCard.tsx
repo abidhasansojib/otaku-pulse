@@ -25,7 +25,11 @@ export function AnimeCard({ anime, rank, onPlayTrailer }: AnimeCardProps) {
 
   const title = anime.title_english || anime.title;
   const score = anime.score ? anime.score.toFixed(1) : 'N/A';
-  const episodes = anime.episodes ? `${anime.episodes} eps` : 'Ongoing';
+  const isAiring = anime.airing || anime.status === 'Currently Airing';
+  const currentAiredCount = anime.current_aired_episodes;
+  const episodes = isAiring
+    ? (currentAiredCount ? `${currentAiredCount} / ? eps aired` : 'Airing')
+    : (anime.episodes ? `${anime.episodes} eps` : 'Completed');
   const trailerEmbed = anime.trailer?.embed_url;
 
   return (

@@ -145,22 +145,25 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
 
   const handleSetEpisodesWatched = async (count: number) => {
     if (!user) return;
+    const isOngoing = anime?.airing || anime?.status === 'Currently Airing';
     const totalEps = anime?.episodes || 0;
+    const currentAiredEps = anime?.current_aired_episodes || (isOngoing ? 0 : totalEps);
     const durationMinutes = parseDurationMinutes(anime?.duration);
 
-    // Strict capping logic: cannot exceed total episodes if total episodes is known!
+    // Capping logic: allow tracking up to current aired count (if ongoing) or total episodes
+    const maxAllowed = isOngoing && currentAiredEps > 0 ? currentAiredEps : (totalEps > 0 ? totalEps : 9999);
     let targetCount = Math.max(0, count);
-    if (totalEps > 0 && targetCount >= totalEps) {
-      targetCount = totalEps;
+    if (targetCount >= maxAllowed && maxAllowed > 0) {
+      targetCount = maxAllowed;
     }
 
     setEpisodesWatched(targetCount);
 
     let newStatus = watchlistStatus || 'WATCHING';
 
-    if (totalEps > 0 && targetCount >= totalEps) {
+    if (!isOngoing && totalEps > 0 && targetCount >= totalEps) {
       newStatus = 'COMPLETED';
-    } else if (totalEps > 0 && targetCount < totalEps && watchlistStatus === 'COMPLETED') {
+    } else if (watchlistStatus === 'COMPLETED' && targetCount < totalEps) {
       newStatus = 'WATCHING';
     }
 
@@ -383,7 +386,9 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
                   )}
                 </h3>
                 <p className="text-xs text-slate-300">
-                  {anime?.episodes
+                  {anime?.airing || anime?.status === 'Currently Airing'
+                    ? `Airing • Watched ${episodesWatched} of ${anime?.current_aired_episodes || '?'} aired episodes`
+                    : anime?.episodes
                     ? `Watching ${episodesWatched} of ${anime.episodes} episodes`
                     : `Watched ${episodesWatched} episodes`}
                 </p>
@@ -415,12 +420,16 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
                     <input
                       type="number"
                       min={0}
-                      max={anime?.episodes || 9999}
+                      max={anime?.current_aired_episodes || anime?.episodes || 9999}
                       value={episodesWatched}
                       onChange={(e) => handleSetEpisodesWatched(parseInt(e.target.value) || 0)}
                       className="w-12 bg-transparent text-center text-xs font-black text-white focus:outline-none"
                     />
-                    {anime?.episodes && <span className="text-xs text-slate-400">/ {anime.episodes}</span>}
+                    {anime?.airing || anime?.status === 'Currently Airing' ? (
+                      <span className="text-xs text-slate-400">/ {anime?.current_aired_episodes || '?'} (Airing)</span>
+                    ) : anime?.episodes ? (
+                      <span className="text-xs text-slate-400">/ {anime.episodes}</span>
+                    ) : null}
                   </div>
 
                   <button
