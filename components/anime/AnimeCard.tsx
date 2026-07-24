@@ -118,21 +118,9 @@ export function AnimeCard({ anime, rank, onPlayTrailer }: AnimeCardProps) {
               {title}
             </h3>
           </Link>
-          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            {isAiring && (
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold tracking-wider uppercase flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Airing
-              </span>
-            )}
-            <span className="text-[11px] font-extrabold text-slate-300">
-              {episodes}
-            </span>
-            {anime.year && (
-              <span className="text-[10px] text-slate-500 font-medium ml-auto">
-                {anime.year}
-              </span>
-            )}
+          <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-between font-medium">
+            <span>{episodes}</span>
+            <span>{anime.year || anime.season || 'Anime'}</span>
           </div>
         </div>
 
