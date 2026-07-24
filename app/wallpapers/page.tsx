@@ -150,8 +150,8 @@ export default function WallpapersPage() {
               {/* Wallpaper Card Info & Actions */}
               <div className="p-3.5 bg-slate-950/90 flex items-center justify-between gap-2 border-t border-white/5">
                 <div className="space-y-0.5 truncate">
-                  <p className="text-xs font-bold text-white truncate">
-                    {img.artist_name || 'Original Artwork'}
+                  <p className="text-xs font-bold text-white truncate" title={img.title || 'Anime Artwork'}>
+                    {img.title || img.artist_name || 'Anime Artwork'}
                   </p>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {img.tags?.slice(0, 2).map((t, idx) => (
