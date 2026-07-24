@@ -18,6 +18,9 @@ import {
   RefreshCw,
   Clock,
   Sparkles,
+  Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useAuth } from '../../lib/context/AuthContext';
 import { createClient } from '../../lib/supabase/client';
@@ -139,12 +142,19 @@ function ProfileContent() {
   // Delete Account State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleConfirmDeleteAccount = async () => {
-    if (deleteConfirmationText.trim() !== 'deletemyaccount') {
-      setDeleteError('Confirmation phrase does not match. Please type deletemyaccount');
+    if (deleteConfirmationText !== 'deletemyaccount') {
+      setDeleteError('Confirmation phrase does not match. Please type deletemyaccount with no spaces.');
+      return;
+    }
+
+    if (!deletePassword) {
+      setDeleteError('Please enter your account password to authorize deletion.');
       return;
     }
 
@@ -153,20 +163,27 @@ function ProfileContent() {
     setDeleteError(null);
 
     try {
-      // 1. Delete user data from database tables
-      await supabase.from('watchlist').delete().eq('user_id', user.id);
-      await supabase.from('favorites').delete().eq('user_id', user.id);
-      await supabase.from('reviews').delete().eq('user_id', user.id);
-      await supabase.from('profiles').delete().eq('id', user.id);
+      // 1. Send API request to server endpoint to verify password & delete user permanently from auth.users + database
+      const res = await fetch('/api/user/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: deletePassword }),
+      });
 
-      // 2. Sign out user
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to delete account.');
+      }
+
+      // 2. Client sign out
       await supabase.auth.signOut();
 
-      // 3. Close modal & redirect to homepage
+      // 3. Close modal & redirect to login page with notice
       setIsDeleteModalOpen(false);
-      window.location.href = '/';
+      window.location.href = '/auth/login?message=account_deleted';
     } catch (err: any) {
-      setDeleteError(`Failed to delete account: ${err.message}`);
+      setDeleteError(err?.message || 'Failed to delete account. Please check your password.');
       setIsDeletingAccount(false);
     }
   };
@@ -523,25 +540,32 @@ function ProfileContent() {
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs"
                   />
                 </div>
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-[#FF2A5F] text-white font-bold text-xs"
-                  >
-                    Save Changes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingProfile(false)}
-                    className="px-4 py-2 rounded-xl glass-panel text-slate-400 text-xs"
-                  >
-                    Cancel
-                  </button>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/10">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="submit"
+                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white font-bold text-xs shadow-md"
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingProfile(false)}
+                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl glass-panel text-slate-400 text-xs font-semibold hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                  </div>
 
                   <button
                     type="button"
-                    onClick={() => setIsDeleteModalOpen(true)}
-                    className="ml-auto px-3.5 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 font-bold text-xs flex items-center gap-1.5 transition-all"
+                    onClick={() => {
+                      setIsDeleteModalOpen(true);
+                      setDeleteConfirmationText('');
+                      setDeletePassword('');
+                      setDeleteError(null);
+                    }}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Delete My Account</span>
@@ -1011,25 +1035,42 @@ function ProfileContent() {
       {/* Delete Account Confirmation Modal */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-red-500/30 max-w-md w-full space-y-5 bg-slate-900/95 shadow-2xl">
+          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-red-500/40 max-w-md w-full space-y-5 bg-slate-900/95 shadow-2xl">
             <div className="flex items-center gap-3 text-red-500">
               <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center border border-red-500/30 shrink-0">
                 <Trash2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-white">Delete Account Permanently?</h3>
-                <p className="text-xs text-slate-400">This action cannot be undone.</p>
+                <h3 className="text-lg font-black text-white">Delete Account Permanently</h3>
+                <p className="text-xs text-slate-400">Exact phrase match + Password verification</p>
               </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed bg-red-500/10 p-3.5 rounded-2xl border border-red-500/20">
-              All your watchlist progress, saved favorites, and reviews will be permanently erased from OtakuPulse.
-            </p>
+            <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs leading-relaxed space-y-1">
+              <p className="font-bold text-red-400">⚠️ Permanent Deletion Notice</p>
+              <p className="text-[11px] text-slate-300">
+                All your watchlist progress, saved favorites, reviews, and user account will be permanently deleted from OtakuPulse and Supabase.
+              </p>
+            </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-300 block">
-                To confirm, type <span className="text-red-400 font-mono font-black select-all">deletemyaccount</span> below:
-              </label>
+            {deleteError && (
+              <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/40 text-red-400 text-xs font-semibold text-center">
+                {deleteError}
+              </div>
+            )}
+
+            {/* Step 1: Exact Confirmation Phrase */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-300">
+                  Step 1: Type <span className="text-red-400 font-mono font-black select-all">deletemyaccount</span>
+                </label>
+                {deleteConfirmationText === 'deletemyaccount' && (
+                  <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                    <Check className="w-3 h-3" /> Exact match
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 value={deleteConfirmationText}
@@ -1040,15 +1081,41 @@ function ProfileContent() {
                 placeholder="deletemyaccount"
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-red-500"
               />
-              {deleteError && <p className="text-[11px] font-bold text-red-400">{deleteError}</p>}
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            {/* Step 2: Password Verification */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300">Step 2: Enter Account Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                <input
+                  type={showDeletePassword ? 'text' : 'password'}
+                  value={deletePassword}
+                  onChange={(e) => {
+                    setDeletePassword(e.target.value);
+                    setDeleteError(null);
+                  }}
+                  placeholder="Enter your account password"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-950 border border-white/15 text-white text-xs focus:outline-none focus:border-red-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowDeletePassword(!showDeletePassword)}
+                  className="absolute right-3.5 top-3 text-slate-400 hover:text-white transition-colors"
+                  title={showDeletePassword ? 'Hide password' : 'Show password'}
+                >
+                  {showDeletePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/10">
               <button
                 type="button"
                 onClick={() => {
                   setIsDeleteModalOpen(false);
                   setDeleteConfirmationText('');
+                  setDeletePassword('');
                   setDeleteError(null);
                 }}
                 className="px-4 py-2.5 rounded-xl glass-panel text-slate-300 text-xs font-bold hover:text-white"
@@ -1057,11 +1124,11 @@ function ProfileContent() {
               </button>
               <button
                 type="button"
-                disabled={deleteConfirmationText.trim() !== 'deletemyaccount' || isDeletingAccount}
+                disabled={deleteConfirmationText !== 'deletemyaccount' || !deletePassword || isDeletingAccount}
                 onClick={handleConfirmDeleteAccount}
                 className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-lg shadow-red-600/30 transition-all disabled:opacity-40 disabled:pointer-events-none"
               >
-                {isDeletingAccount ? 'Deleting Account...' : 'Confirm Delete Account'}
+                {isDeletingAccount ? 'Deleting Account...' : 'Delete Account Permanently'}
               </button>
             </div>
           </div>
