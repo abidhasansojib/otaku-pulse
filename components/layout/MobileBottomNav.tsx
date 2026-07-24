@@ -13,7 +13,6 @@ export function MobileBottomNav() {
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/seasons', label: 'Seasons', icon: Calendar },
-    { href: '/wallpapers', label: 'Art', icon: ImageIcon },
     { href: '/search', label: 'Search', icon: Search },
     { href: '/favorites', label: 'Favorites', icon: Bookmark, badge: favorites.length },
   ];
