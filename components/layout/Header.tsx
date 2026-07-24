@@ -132,21 +132,21 @@ export function Header() {
           <div className="flex items-center gap-3 ml-auto sm:ml-0">
             {user ? (
               <div className="relative" ref={dropdownRef}>
-                {/* Profile Photo Button */}
+                {/* Ultra-Modern Cyberpunk Profile Button */}
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 hover:border-[#FF2A5F] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer shadow-lg shadow-black/20 focus:outline-none focus:ring-2 focus:ring-[#FF2A5F]/50 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  className="relative p-[2px] rounded-full bg-gradient-to-tr from-[#FF2A5F] via-[#8A2BE2] to-cyan-400 hover:shadow-[0_0_20px_rgba(255,42,95,0.4)] hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer group focus:outline-none"
                   title={usernameDisplay}
                 >
-                  {hasAvatar ? (
-                    <Image src={avatarUrl} alt={usernameDisplay} fill className="object-cover" unoptimized />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-tr from-[#FF2A5F] to-[#8A2BE2] flex items-center justify-center text-white font-extrabold text-sm tracking-wider">
-                      {usernameDisplay.substring(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                  {/* Online Status Dot */}
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 ring-2 ring-slate-950 rounded-full" />
+                  <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-slate-950 flex items-center justify-center">
+                    {hasAvatar ? (
+                      <Image src={avatarUrl} alt={usernameDisplay} fill className="object-cover group-hover:scale-110 transition-transform duration-300" unoptimized />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-tr from-[#FF2A5F] to-[#8A2BE2] flex items-center justify-center text-white font-black text-xs tracking-wider">
+                        {usernameDisplay.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
                 </button>
 
                 {/* Profile Dropdown Menu */}
