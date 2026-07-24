@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Search, Calendar, Bookmark } from 'lucide-react';
+import { Home, Search, Calendar, Bookmark, Image as ImageIcon } from 'lucide-react';
 import { useFavorites } from '../../lib/hooks/useFavorites';
 
 export function MobileBottomNav() {
@@ -13,6 +13,7 @@ export function MobileBottomNav() {
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/seasons', label: 'Seasons', icon: Calendar },
+    { href: '/wallpapers', label: 'Art', icon: ImageIcon },
     { href: '/search', label: 'Search', icon: Search },
     { href: '/favorites', label: 'Favorites', icon: Bookmark, badge: favorites.length },
   ];
