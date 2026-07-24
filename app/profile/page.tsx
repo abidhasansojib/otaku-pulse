@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -212,11 +212,14 @@ function ProfileContent() {
     }
   }, [user]);
 
-  // Fetch anime details for reviews missing metadata via API
+  const inFlightReviewsRef = useRef<Set<number>>(new Set());
+
+  // Fetch anime details for reviews missing metadata via API (guarded against duplicate in-flight calls)
   useEffect(() => {
     if (reviews && reviews.length > 0) {
       reviews.forEach(async (rev) => {
-        if (!rev.anime_title && !reviewAnimeMap[rev.anime_id]) {
+        if (!rev.anime_title && !reviewAnimeMap[rev.anime_id] && !inFlightReviewsRef.current.has(rev.anime_id)) {
+          inFlightReviewsRef.current.add(rev.anime_id);
           const matchedWatch = watchlist.find((w) => w.anime_id === rev.anime_id);
           const matchedFav = favorites.find((f) => f.anime_id === rev.anime_id);
 
@@ -252,7 +255,7 @@ function ProfileContent() {
         }
       });
     }
-  }, [reviews, watchlist, favorites]);
+  }, [reviews, watchlist, favorites, reviewAnimeMap]);
 
   const fetchUserData = async () => {
     if (!user) return;

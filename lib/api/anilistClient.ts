@@ -209,7 +209,7 @@ export function mapAniListToAnimeItem(media: AniListMedia): AnimeItem {
     type: media.format || media.type || 'TV',
     episodes: media.episodes || null,
     duration: media.duration ? `${media.duration} mins per ep` : undefined,
-    status: media.status === 'RELEASING' ? 'Currently Airing' : media.status === 'FINISHED' ? 'Finished Airing' : media.status || 'Finished',
+    status: media.status === 'RELEASING' ? 'Currently Airing' : media.status === 'FINISHED' ? 'Finished Airing' : media.status === 'NOT_YET_RELEASED' ? 'Not Yet Aired' : media.status === 'CANCELLED' ? 'Cancelled' : media.status === 'HIATUS' ? 'On Hiatus' : media.status || 'Finished',
     airing: media.status === 'RELEASING',
     score,
     rank: media.popularity ? Math.max(1, Math.floor(1000 - media.popularity / 100)) : null,
@@ -242,6 +242,10 @@ async function fetchAniListGraphQL<T>(query: string, variables: Record<string, a
     }
 
     const json = await res.json();
+    if (json?.errors && json.errors.length > 0) {
+      console.warn('AniList GraphQL errors:', json.errors);
+      return null;
+    }
     return json?.data || null;
   } catch (err) {
     return null;

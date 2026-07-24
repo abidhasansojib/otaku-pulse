@@ -265,10 +265,11 @@ export function RankTable({ topRated, mostPopular, currentSeason, isLoading: ini
             {renderPagePills()}
           </div>
 
-          {/* Next Page Button (Unlimited) */}
+          {/* Next Page Button */}
           <button
             onClick={() => handlePageChange(activePage + 1)}
-            className="p-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white hover:bg-[#FF2A5F] transition-all flex items-center gap-1 text-xs font-bold shrink-0"
+            disabled={displayedData.length < pageSize}
+            className="p-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white hover:bg-[#FF2A5F] transition-all flex items-center gap-1 text-xs font-bold shrink-0 disabled:opacity-30 disabled:pointer-events-none"
             aria-label="Next Page"
             title="Next Page"
           >

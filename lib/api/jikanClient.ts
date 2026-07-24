@@ -223,11 +223,15 @@ export async function getSeasonalAnime(
   }
 
   // Fast AniList fallback with dynamic season & year
-  const aniListResults = await getCurrentSeasonAnimeAniList(season, year, limit, page);
-  return {
-    data: deduplicateAnimeList(aniListResults),
-    pagination: { last_visible_page: 5, has_next_page: true },
-  };
+  try {
+    const aniListResults = await getCurrentSeasonAnimeAniList(season, year, limit, page);
+    return {
+      data: deduplicateAnimeList(aniListResults),
+      pagination: { last_visible_page: 5, has_next_page: true },
+    };
+  } catch {
+    return { data: [], pagination: { last_visible_page: 1, has_next_page: false } };
+  }
 }
 
 // Fetch Current Season Anime

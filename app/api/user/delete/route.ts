@@ -16,15 +16,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized user session' }, { status: 401 });
     }
 
-    // 2. Parse request body for password
-    const body = await request.json();
+    // 2. Parse request body for password (guarded)
+    let body: { password?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
     const { password } = body;
 
     if (!password) {
       return NextResponse.json({ error: 'Password is required to confirm account deletion' }, { status: 400 });
     }
 
-    // 3. Verify user's password using signInWithPassword
+    // 3. Verify user's password
     const { error: passwordErr } = await supabase.auth.signInWithPassword({
       email: user.email,
       password: password,
@@ -37,11 +43,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Initialize Supabase Admin client with SUPABASE_SERVICE_ROLE_KEY
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fgjfffjobemejpfoxfpm.supabase.co';
-    const serviceRoleKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnamZmZmpvYmVtZWpwZm94ZnBtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDc5NTc2OSwiZXhwIjoyMTAwMzcxNzY5fQ.LHj0Pj4trVz69-sHI_0_JdPaFu6aCPB_cWjTFoookBc';
+    // 4. Initialize Supabase Admin client (env vars required, no fallbacks)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
 
     const adminClient = createAdminClient(supabaseUrl, serviceRoleKey, {
       auth: {
@@ -55,6 +64,8 @@ export async function POST(request: Request) {
       await adminClient.rpc('delete_user_account', { target_user_id: user.id });
     } catch (e) {
       console.error('RPC deletion error:', e);
+      // If RPC fails, do NOT proceed — return error
+      return NextResponse.json({ error: 'Failed to clean up account data. Deletion aborted.' }, { status: 500 });
     }
 
     // 6. Delete user permanently from auth.users using admin API
@@ -63,10 +74,10 @@ export async function POST(request: Request) {
     if (adminDeleteErr) {
       console.error('Admin delete user error:', adminDeleteErr);
       // Fallback: manually delete from database tables
-      await supabase.from('watchlist').delete().eq('user_id', user.id);
-      await supabase.from('favorites').delete().eq('user_id', user.id);
-      await supabase.from('reviews').delete().eq('user_id', user.id);
-      await supabase.from('profiles').delete().eq('id', user.id);
+      await adminClient.from('watchlist').delete().eq('user_id', user.id);
+      await adminClient.from('favorites').delete().eq('user_id', user.id);
+      await adminClient.from('reviews').delete().eq('user_id', user.id);
+      await adminClient.from('profiles').delete().eq('id', user.id);
     }
 
     // 7. Sign out session

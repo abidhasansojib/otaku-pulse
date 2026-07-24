@@ -17,10 +17,6 @@ import {
   LogOut,
   ListVideo,
   Settings,
-  ChevronDown,
-  Image as ImageIcon,
-  Menu,
-  X as CloseIcon,
 } from 'lucide-react';
 import { useFavorites } from '../../lib/hooks/useFavorites';
 import { useAuth } from '../../lib/context/AuthContext';
@@ -40,7 +36,6 @@ export function Header() {
   const [isRandomLoading, setIsRandomLoading] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -79,6 +74,7 @@ export function Header() {
 
   const usernameDisplay = profile?.username || user?.email?.split('@')[0] || 'User';
   const avatarUrl = profile?.avatar_url || '/banner-placeholder.webp';
+  const hasAvatar = profile?.avatar_url && !profile.avatar_url.includes('placeholder');
 
   return (
     <>
@@ -104,8 +100,10 @@ export function Header() {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive =
-                pathname === item.href ||
-                (item.href !== '/' && pathname.startsWith(item.href) && !item.href.includes('sort='));
+                item.href.includes('sort=')
+                  ? pathname + window?.location?.search === item.href
+                  : pathname === item.href ||
+                    (item.href !== '/' && pathname.startsWith(item.href));
 
               return (
                 <Link
@@ -129,35 +127,44 @@ export function Header() {
             })}
           </nav>
 
-          {/* Right-aligned Auth & User Profile Section */}
+          {/* Right-aligned Auth & Profile Photo Button */}
           <div className="flex items-center gap-3 ml-auto sm:ml-0">
             {user ? (
               <div className="relative" ref={dropdownRef}>
-                {/* Cyberpunk-Styled Profile Button */}
+                {/* Profile Photo Button */}
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="relative p-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 rounded-full hover:shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-all duration-300 scale-100 hover:scale-105 active:scale-95 flex items-center justify-center group cursor-pointer"
+                  className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 hover:border-[#FF2A5F] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer shadow-lg shadow-black/20 focus:outline-none focus:ring-2 focus:ring-[#FF2A5F]/50 focus:ring-offset-2 focus:ring-offset-slate-950"
                   title={usernameDisplay}
                 >
-                  <div className="relative w-9 h-9 rounded-full overflow-hidden bg-slate-950 flex items-center justify-center text-white font-black text-xs">
-                    {profile?.avatar_url && !profile.avatar_url.includes('placeholder') ? (
-                      <Image src={profile.avatar_url} alt={usernameDisplay} fill className="object-cover" unoptimized />
-                    ) : (
-                      <span className="bg-gradient-to-tr from-purple-600 to-pink-500 w-full h-full flex items-center justify-center text-white font-extrabold tracking-wider">
-                        {usernameDisplay.substring(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  {/* Active Status Indicator Dot */}
+                  {hasAvatar ? (
+                    <Image src={avatarUrl} alt={usernameDisplay} fill className="object-cover" unoptimized />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-tr from-[#FF2A5F] to-[#8A2BE2] flex items-center justify-center text-white font-extrabold text-sm tracking-wider">
+                      {usernameDisplay.substring(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  {/* Online Status Dot */}
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 ring-2 ring-slate-950 rounded-full" />
                 </button>
 
-                {/* Profile Dropdown Menu with Reduced Blur */}
+                {/* Profile Dropdown Menu */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2.5 w-60 bg-slate-900/95 backdrop-blur-sm border border-slate-800 shadow-2xl rounded-2xl p-2 space-y-1 z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="px-3.5 py-2.5 border-b border-slate-800 mb-1 bg-slate-950/60 rounded-xl">
-                      <p className="text-xs font-black text-white truncate">{usernameDisplay}</p>
-                      <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
+                    <div className="px-3.5 py-2.5 border-b border-slate-800 mb-1 bg-slate-950/60 rounded-xl flex items-center gap-3">
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0">
+                        {hasAvatar ? (
+                          <Image src={avatarUrl} alt={usernameDisplay} fill className="object-cover" unoptimized />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-tr from-[#FF2A5F] to-[#8A2BE2] flex items-center justify-center text-white font-bold text-xs">
+                            {usernameDisplay.substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-white truncate">{usernameDisplay}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
+                      </div>
                     </div>
 
                     <Link

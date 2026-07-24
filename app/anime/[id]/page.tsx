@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -48,7 +48,8 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
   const numericAnimeId = parseInt(animeId, 10) || 0;
 
   const { user } = useAuth();
-  const supabase = createClient();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const supabase = useMemo(() => createClient(), []);
   const { isFavorite, toggleFavorite } = useFavorites();
 
   const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
@@ -68,14 +69,7 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
     staleTime: 1000 * 60 * 30, // 30 minutes cache
   });
 
-  // Fetch existing watchlist status for logged-in user
-  useEffect(() => {
-    if (user && numericAnimeId) {
-      fetchUserWatchlistStatus();
-    }
-  }, [user, numericAnimeId]);
-
-  const fetchUserWatchlistStatus = async () => {
+  const fetchUserWatchlistStatus = useCallback(async () => {
     if (!user) return;
     try {
       const { data, error } = await supabase
@@ -92,7 +86,14 @@ export default function AnimeDetailPage({ params }: { params: Promise<{ id: stri
     } catch (e) {
       // Silent catch
     }
-  };
+  }, [user, numericAnimeId, supabase]);
+
+  // Fetch existing watchlist status for logged-in user
+  useEffect(() => {
+    if (user && numericAnimeId) {
+      fetchUserWatchlistStatus();
+    }
+  }, [user, numericAnimeId, fetchUserWatchlistStatus]);
 
   const handleWatchlistChange = async (newStatus: string) => {
     if (!user) return;
