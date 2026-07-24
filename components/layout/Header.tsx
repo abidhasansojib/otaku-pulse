@@ -64,7 +64,7 @@ export function Header() {
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/seasons', label: 'Seasonal Hub', icon: Calendar },
-    { href: '/wallpapers', label: 'Wallpapers', icon: ImageIcon },
+    { href: '/wallpapers', label: 'Wallpapers & Art', icon: ImageIcon },
     { href: '/search', label: 'Explore & Search', icon: Compass },
     { href: '/search?sort=desc&orderBy=score', label: 'Top Rankings', icon: Flame },
     { href: '/favorites', label: 'Favorites', icon: Bookmark, badge: favorites.length },
