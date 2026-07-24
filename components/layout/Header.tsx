@@ -134,23 +134,29 @@ export function Header() {
           <div className="flex items-center gap-3 ml-auto sm:ml-0">
             {user ? (
               <div className="relative" ref={dropdownRef}>
+                {/* Cyberpunk-Styled Profile Button */}
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2.5 p-1.5 pr-3 rounded-full bg-slate-900/90 border border-white/15 hover:border-[#FF2A5F] transition-all shadow-md group"
+                  className="relative p-[2px] bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 rounded-full hover:shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-all duration-300 scale-100 hover:scale-105 active:scale-95 flex items-center justify-center group cursor-pointer"
+                  title={usernameDisplay}
                 >
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden bg-slate-800 border border-white/10 shrink-0 group-hover:scale-105 transition-transform">
-                    <Image src={avatarUrl} alt={usernameDisplay} fill className="object-cover" unoptimized />
+                  <div className="relative w-9 h-9 rounded-full overflow-hidden bg-slate-950 flex items-center justify-center text-white font-black text-xs">
+                    {profile?.avatar_url && !profile.avatar_url.includes('placeholder') ? (
+                      <Image src={profile.avatar_url} alt={usernameDisplay} fill className="object-cover" unoptimized />
+                    ) : (
+                      <span className="bg-gradient-to-tr from-purple-600 to-pink-500 w-full h-full flex items-center justify-center text-white font-extrabold tracking-wider">
+                        {usernameDisplay.substring(0, 2).toUpperCase()}
+                      </span>
+                    )}
                   </div>
-                  <span className="text-xs font-extrabold text-white max-w-[110px] truncate hidden sm:inline">
-                    {usernameDisplay}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
+                  {/* Active Status Indicator Dot */}
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 ring-2 ring-slate-950 rounded-full" />
                 </button>
 
-                {/* User Menu Dropdown */}
+                {/* Profile Dropdown Menu with Reduced Blur */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2.5 w-60 glass-panel rounded-2xl border border-white/15 shadow-2xl p-2 space-y-1 z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="px-3.5 py-2.5 border-b border-white/10 mb-1 bg-white/5 rounded-xl">
+                  <div className="absolute right-0 mt-2.5 w-60 bg-slate-900/95 backdrop-blur-sm border border-slate-800 shadow-2xl rounded-2xl p-2 space-y-1 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-3.5 py-2.5 border-b border-slate-800 mb-1 bg-slate-950/60 rounded-xl">
                       <p className="text-xs font-black text-white truncate">{usernameDisplay}</p>
                       <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
                     </div>
@@ -161,7 +167,7 @@ export function Header() {
                       className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/10 transition-all"
                     >
                       <UserIcon className="w-4 h-4 text-[#FF2A5F]" />
-                      <span>My Profile & Dashboard</span>
+                      <span>My Profile &amp; Dashboard</span>
                     </Link>
 
                     <Link
@@ -196,7 +202,7 @@ export function Header() {
                         setIsDropdownOpen(false);
                         signOut();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-all border-t border-white/10 mt-1"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-all border-t border-slate-800 mt-1"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Sign Out</span>
@@ -213,52 +219,8 @@ export function Header() {
                 <span>Sign In</span>
               </button>
             )}
-
-            {/* Mobile Hamburger Drawer Toggle Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden min-h-[44px] min-w-[44px] p-2.5 rounded-2xl bg-slate-900 border border-white/15 text-slate-300 hover:text-white flex items-center justify-center transition-all"
-              aria-label="Toggle Navigation Menu"
-            >
-              {isMobileMenuOpen ? <CloseIcon className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
-
-        {/* Mobile Navigation Drawer Modal */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden fixed inset-x-0 top-16 bg-black/90 backdrop-blur-md border-b border-white/15 p-4 space-y-2 z-50 animate-in slide-in-from-top-2 duration-200">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                pathname === item.href ||
-                (item.href !== '/' && pathname.startsWith(item.href) && !item.href.includes('sort='));
-
-              return (
-                <Link
-                  key={`mobile-${item.href}`}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`min-h-[44px] px-4 py-3 rounded-2xl text-xs font-extrabold flex items-center justify-between transition-all ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white shadow-lg'
-                      : 'text-slate-200 hover:bg-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className="w-4 h-4 text-[#FF2A5F]" />
-                    <span>{item.label}</span>
-                  </div>
-                  {isLoaded && item.badge !== undefined && item.badge > 0 && (
-                    <span className="px-2 py-0.5 text-[10px] bg-white text-[#0B0F19] font-bold rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        )}
       </header>
 
       {/* Auth Modal */}

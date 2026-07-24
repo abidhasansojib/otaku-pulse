@@ -1,4 +1,4 @@
-import { getRandomArtworks, searchArtworks, NekosBestResult } from './nekosBest';
+import { getAnimeWallpapers, WallpaperItem } from './wallpapers';
 
 export interface NekosImage {
   id: number | string;
@@ -20,43 +20,21 @@ export const NEKOS_GIF_CATEGORIES = ['dance', 'hug', 'kiss', 'pat', 'smile', 'sm
 
 export async function fetchNekosWallpapers(
   queryOrCategory: string = 'waifu',
-  limit: number = 18
+  limit: number = 20
 ): Promise<NekosImage[]> {
-  const query = queryOrCategory.toLowerCase().trim();
-  const isImageCategory = NEKOS_IMAGE_CATEGORIES.includes(query as any);
-  const isGifCategory = NEKOS_GIF_CATEGORIES.includes(query as any);
+  const wallpapers = await getAnimeWallpapers(queryOrCategory, limit);
 
-  let results: NekosBestResult[] = [];
-
-  if (isImageCategory || isGifCategory) {
-    results = await getRandomArtworks(query, limit);
-  } else if (query) {
-    results = await searchArtworks(query, 1, limit);
-  } else {
-    results = await getRandomArtworks('waifu', limit);
-  }
-
-  const mapped: NekosImage[] = results.map((item, idx) => {
-    const dims = item.dimensions
-      ? `${item.dimensions.width}x${item.dimensions.height}`
-      : isGifCategory
-      ? 'GIF'
-      : 'HD Artwork';
-
-    return {
-      id: `nekosbest-${query}-${idx}-${Date.now()}`,
-      title: item.artist_name ? `Artwork by ${item.artist_name}` : `${query.toUpperCase()} Anime Artwork #${idx + 1}`,
-      url: item.url,
-      thumbnail_url: item.url,
-      rating: 'safe',
-      type: isGifCategory ? 'gif' : 'artwork',
-      artist_name: item.artist_name || 'Anime Artist',
-      artist_href: item.artist_href || null,
-      dimensions: dims,
-      tags: [query, 'Anime', isGifCategory ? 'Animation' : 'Wallpaper'],
-      source_url: item.source_url || item.artist_href || null,
-    };
-  });
-
-  return mapped;
+  return wallpapers.map((w, idx) => ({
+    id: w.id || `wallpaper-${idx}`,
+    title: w.tags?.[0] ? `${w.tags[0].toUpperCase()} HD Anime Wallpaper` : `HD Anime Artwork #${idx + 1}`,
+    url: w.url,
+    thumbnail_url: w.url,
+    rating: 'safe',
+    type: 'artwork',
+    artist_name: 'Waifu.im Artist',
+    artist_href: w.source || null,
+    dimensions: w.width && w.height ? `${w.width}x${w.height}` : 'HD 1080p',
+    tags: w.tags || ['Anime', 'Wallpaper'],
+    source_url: w.source || null,
+  }));
 }

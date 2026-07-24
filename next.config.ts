@@ -6,15 +6,15 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "nekos.best",
+        hostname: "cdn.waifu.im",
       },
       {
         protocol: "https",
-        hostname: "*.nekos.best",
+        hostname: "i.waifu.pics",
       },
       {
         protocol: "https",
-        hostname: "cdn.nekosapi.com",
+        hostname: "waifu.pics",
       },
       {
         protocol: "https",
@@ -27,6 +27,18 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "s4.anilist.co",
+      },
+      {
+        protocol: "https",
+        hostname: "nekos.best",
+      },
+      {
+        protocol: "https",
+        hostname: "*.nekos.best",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.nekosapi.com",
       },
       {
         protocol: "https",

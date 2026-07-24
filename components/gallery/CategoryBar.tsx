@@ -42,7 +42,7 @@ export function CategoryBar({ activeCategory, onSelectCategory }: CategoryBarPro
 
       <div className="h-4 w-px bg-white/15 mx-1 hidden sm:block" />
 
-      {reactionGifs.map((gif) => (
+      {reactionGifs.map((gif: string) => (
         <button
           key={gif}
           type="button"
