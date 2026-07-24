@@ -2,7 +2,20 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "nekos.best",
+      },
+      {
+        protocol: "https",
+        hostname: "*.nekos.best",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.nekosapi.com",
+      },
       {
         protocol: "https",
         hostname: "cdn.myanimelist.net",

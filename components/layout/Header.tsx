@@ -19,10 +19,17 @@ import {
   Settings,
   ChevronDown,
   Image as ImageIcon,
+  Menu,
+  X as CloseIcon,
 } from 'lucide-react';
 import { useFavorites } from '../../lib/hooks/useFavorites';
 import { useAuth } from '../../lib/context/AuthContext';
-import { AuthModal } from '../auth/AuthModal';
+import dynamic from 'next/dynamic';
+
+const AuthModal = dynamic(
+  () => import('../auth/AuthModal').then((mod) => mod.AuthModal),
+  { ssr: false }
+);
 
 export function Header() {
   const pathname = usePathname();
@@ -33,6 +40,7 @@ export function Header() {
   const [isRandomLoading, setIsRandomLoading] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -205,8 +213,52 @@ export function Header() {
                 <span>Sign In</span>
               </button>
             )}
+
+            {/* Mobile Hamburger Drawer Toggle Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden min-h-[44px] min-w-[44px] p-2.5 rounded-2xl bg-slate-900 border border-white/15 text-slate-300 hover:text-white flex items-center justify-center transition-all"
+              aria-label="Toggle Navigation Menu"
+            >
+              {isMobileMenuOpen ? <CloseIcon className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Drawer Modal */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden fixed inset-x-0 top-16 bg-black/90 backdrop-blur-md border-b border-white/15 p-4 space-y-2 z-50 animate-in slide-in-from-top-2 duration-200">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== '/' && pathname.startsWith(item.href) && !item.href.includes('sort='));
+
+              return (
+                <Link
+                  key={`mobile-${item.href}`}
+                  href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`min-h-[44px] px-4 py-3 rounded-2xl text-xs font-extrabold flex items-center justify-between transition-all ${
+                    isActive
+                      ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white shadow-lg'
+                      : 'text-slate-200 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-4 h-4 text-[#FF2A5F]" />
+                    <span>{item.label}</span>
+                  </div>
+                  {isLoaded && item.badge !== undefined && item.badge > 0 && (
+                    <span className="px-2 py-0.5 text-[10px] bg-white text-[#0B0F19] font-bold rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </header>
 
       {/* Auth Modal */}

@@ -47,7 +47,8 @@ export function AnimeCard({ anime, rank, onPlayTrailer }: AnimeCardProps) {
           src={posterUrl}
           alt={title}
           fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+          loading="lazy"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
           unoptimized
         />

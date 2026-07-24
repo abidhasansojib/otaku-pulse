@@ -3,16 +3,25 @@
 import React, { useState, useEffect, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import { getAnimeById } from '../../../lib/api/jikanClient';
 import { parseDurationMinutes } from '../../../lib/utils/duration';
-import { HDArtworkGallery } from '../../../components/anime/HDArtworkGallery';
 import { AnimeCharacters } from '../../../components/anime/AnimeCharacters';
 import { AnimeRecommendations } from '../../../components/anime/AnimeRecommendations';
 import { AnimeReviews } from '../../../components/anime/AnimeReviews';
-import { TrailerModal } from '../../../components/anime/TrailerModal';
 import { Badge } from '../../../components/ui/Badge';
 import { Skeleton } from '../../../components/ui/Skeleton';
+
+const TrailerModal = dynamic(
+  () => import('../../../components/anime/TrailerModal').then((mod) => mod.TrailerModal),
+  { ssr: false }
+);
+
+const HDArtworkGallery = dynamic(
+  () => import('../../../components/anime/HDArtworkGallery').then((mod) => mod.HDArtworkGallery),
+  { ssr: false }
+);
 import { useFavorites } from '../../../lib/hooks/useFavorites';
 import { useAuth } from '../../../lib/context/AuthContext';
 import { createClient } from '../../../lib/supabase/client';

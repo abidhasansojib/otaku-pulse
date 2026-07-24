@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import { fetchNekosWallpapers, NekosImage } from '../../lib/api/nekosClient';
 import { ArtworkCard } from '../../components/gallery/ArtworkCard';
-import { ArtworkModal } from '../../components/gallery/ArtworkModal';
 import { CategoryBar } from '../../components/gallery/CategoryBar';
 import {
   Sparkles,
@@ -12,6 +12,11 @@ import {
   Search,
   Layers,
 } from 'lucide-react';
+
+const ArtworkModal = dynamic(
+  () => import('../../components/gallery/ArtworkModal').then((mod) => mod.ArtworkModal),
+  { ssr: false }
+);
 
 export default function WallpapersPage() {
   const [activeCategory, setActiveCategory] = useState<string>('waifu');
