@@ -1,5 +1,7 @@
 # 🎌 OtakuPulse
 
+![OtakuPulse Banner](preview.jpg)
+
 **OtakuPulse** is a modern, high-performance web application for anime discovery, watch progress tracking, and personalized stats.
 
 🌐 **Live Application**: [otaku-pulse.vercel.app](https://otaku-pulse.vercel.app)
