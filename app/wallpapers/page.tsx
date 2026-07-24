@@ -3,7 +3,12 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
-import { fetchNekosWallpapers, NekosImage, NEKOS_CATEGORIES } from '../../lib/api/nekosClient';
+import {
+  fetchNekosWallpapers,
+  NekosImage,
+  NEKOS_IMAGE_CATEGORIES,
+  NEKOS_GIF_CATEGORIES,
+} from '../../lib/api/nekosClient';
 import {
   Sparkles,
   Download,
@@ -29,7 +34,7 @@ export default function WallpapersPage() {
   // Fetch wallpapers using React Query powered by nekos.best API + AniList
   const { data: wallpapers, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['nekosBestWallpapers', activeQuery],
-    queryFn: () => fetchNekosWallpapers(activeQuery, 24),
+    queryFn: () => fetchNekosWallpapers(activeQuery, 20),
     staleTime: 1000 * 60 * 5, // 5 mins
   });
 
@@ -76,13 +81,13 @@ export default function WallpapersPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 z-10 relative">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF2A5F]/20 border border-[#FF2A5F]/30 text-[#FF2A5F] text-xs font-bold">
-              <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Powered by Nekos.best API &amp; AniList HD
+              <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Powered by Nekos.best API v2 &amp; AniList HD
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Anime HD Wallpaper &amp; Artwork Hub
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-              Discover, search, and download thousands of high-definition anime wallpapers, character art, and official key visuals.
+              Discover, search, and download high-definition anime wallpapers, character art, and GIFs powered by the official Nekos.best API.
             </p>
           </div>
 
@@ -106,7 +111,7 @@ export default function WallpapersPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search wallpapers by anime title or keyword (e.g. Demon Slayer, Neko, Cyberpunk, Waifu)..."
+                placeholder="Search wallpapers by artist, title, or keyword (e.g. Rin, Genshin, Waifu, Neko)..."
                 className="w-full pl-11 pr-24 py-3 rounded-2xl bg-slate-950/80 border border-white/15 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#FF2A5F] transition-all"
               />
               <button
@@ -123,7 +128,7 @@ export default function WallpapersPage() {
             <span className="text-slate-400 text-xs flex items-center gap-1 mr-1">
               <Tag className="w-3.5 h-3.5 text-[#FF2A5F]" /> Categories:
             </span>
-            {NEKOS_CATEGORIES.map((cat) => (
+            {NEKOS_IMAGE_CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 onClick={() => handleCategorySelect(cat)}
@@ -136,16 +141,19 @@ export default function WallpapersPage() {
                 {cat}
               </button>
             ))}
-            <button
-              onClick={() => handleCategorySelect('official')}
-              className={`px-4 py-1.5 rounded-xl capitalize transition-all border ${
-                activeQuery === 'official'
-                  ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white border-transparent shadow-md font-extrabold'
-                  : 'bg-slate-900/80 text-slate-300 border-white/10 hover:text-white hover:border-white/20'
-              }`}
-            >
-              Official Series Banners
-            </button>
+            {NEKOS_GIF_CATEGORIES.slice(0, 4).map((gifCat) => (
+              <button
+                key={gifCat}
+                onClick={() => handleCategorySelect(gifCat)}
+                className={`px-3 py-1.5 rounded-xl capitalize transition-all border ${
+                  activeQuery === gifCat
+                    ? 'bg-gradient-to-r from-[#FF2A5F] to-[#8A2BE2] text-white border-transparent shadow-md font-extrabold'
+                    : 'bg-slate-900/80 text-slate-400 border-white/10 hover:text-white hover:border-white/20'
+                }`}
+              >
+                {gifCat} (GIF)
+              </button>
+            ))}
           </div>
         </div>
       </div>
