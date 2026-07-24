@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
-import { Image as ImageIcon, Download, Maximize2, Sparkles } from 'lucide-react';
+import { Image as ImageIcon, Download, Maximize2, Sparkles, Copy, Check } from 'lucide-react';
 import { AnimeItem } from '../../lib/types/anime';
-import { rateLimitedFetch } from '../../lib/api/rateLimiter';
+import { getAnimePictures } from '../../lib/api/jikanClient';
 import { Modal } from '../ui/Modal';
 
 interface ArtworkAsset {
@@ -20,34 +20,23 @@ interface HDArtworkGalleryProps {
   anime: AnimeItem;
 }
 
-async function fetchJikanPictures(animeId: number): Promise<string[]> {
-  try {
-    const url = `https://api.jikan.moe/v4/anime/${animeId}/pictures`;
-    const res = await rateLimitedFetch<any>(url);
-    if (res?.data && Array.isArray(res.data)) {
-      return res.data
-        .map((item: any) => item.webp?.large_image_url || item.jpg?.large_image_url || item.jpg?.image_url)
-        .filter(Boolean);
-    }
-  } catch (e) {
-    // Silent catch
-  }
-  return [];
-}
-
 export function HDArtworkGallery({ anime }: HDArtworkGalleryProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'banner' | 'poster' | 'promo'>('all');
   const [lightboxImage, setLightboxImage] = useState<ArtworkAsset | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const mainTitle = anime?.title_english || anime?.title || 'Anime';
-  const mainPoster = anime?.images?.webp?.large_image_url || anime?.images?.jpg?.large_image_url || '/banner-placeholder.webp';
+  const mainPoster =
+    anime?.images?.webp?.large_image_url ||
+    anime?.images?.jpg?.large_image_url ||
+    '/banner-placeholder.webp';
   const mainBanner = anime?.banner_url || mainPoster;
 
-  // Query Jikan Pictures API
-  const { data: jikanPictures } = useQuery({
-    queryKey: ['animePictures', anime?.mal_id],
-    queryFn: () => (anime?.mal_id ? fetchJikanPictures(anime.mal_id) : Promise.resolve([])),
+  // Query Multi-Source Jikan + AniList Official Pictures API
+  const { data: apiPictures } = useQuery({
+    queryKey: ['animePicturesMultiSource', anime?.mal_id],
+    queryFn: () => (anime?.mal_id ? getAnimePictures(anime.mal_id) : Promise.resolve([])),
     enabled: !!anime?.mal_id,
     staleTime: 1000 * 60 * 60, // 1 hour cache
   });
@@ -72,15 +61,15 @@ export function HDArtworkGallery({ anime }: HDArtworkGalleryProps) {
     },
   ];
 
-  // Append Jikan Pictures
-  if (jikanPictures && jikanPictures.length > 0) {
-    jikanPictures.forEach((picUrl, idx) => {
+  // Append Multi-Source Pictures from Jikan & AniList
+  if (apiPictures && apiPictures.length > 0) {
+    apiPictures.forEach((picUrl, idx) => {
       if (picUrl !== mainPoster && picUrl !== mainBanner) {
         assets.push({
-          id: `jikan-promo-${idx}`,
-          title: `${mainTitle} — Official Key Visual #${idx + 1}`,
+          id: `promo-visual-${idx}`,
+          title: `${mainTitle} — Official Key Visual & Artwork #${idx + 1}`,
           url: picUrl,
-          category: 'promo',
+          category: idx % 2 === 0 ? 'promo' : 'banner',
           dimensions: '1080 x 1920 HD',
         });
       }
@@ -88,6 +77,12 @@ export function HDArtworkGallery({ anime }: HDArtworkGalleryProps) {
   }
 
   const filteredAssets = activeTab === 'all' ? assets : assets.filter((a) => a.category === activeTab);
+
+  const handleCopyUrl = (url: string, id: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   // One-Click Client Blob Download Trigger
   const handleDownload = async (asset: ArtworkAsset) => {
@@ -99,7 +94,7 @@ export function HDArtworkGallery({ anime }: HDArtworkGalleryProps) {
 
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `${mainTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${asset.category}_${asset.id}.jpg`;
+      link.download = `${mainTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${asset.category}_${asset.id}.webp`;
       document.body.appendChild(link);
       link.click();
       window.URL.revokeObjectURL(blobUrl);
@@ -117,13 +112,15 @@ export function HDArtworkGallery({ anime }: HDArtworkGalleryProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 min-w-0">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#FF2A5F] to-[#8A2BE2] text-white flex items-center justify-center shadow-lg shadow-[#FF2A5F]/20 shrink-0">
-            <ImageIcon className="w-5 h-5" />
+            <ImageIcon className="w-5 h-5 animate-pulse" />
           </div>
           <div className="min-w-0">
             <h3 className="text-base sm:text-lg font-bold text-white truncate">
-              Official HD Artwork & Wallpaper Center
+              Official HD Artworks &amp; Promotional Visuals
             </h3>
-            <p className="text-xs text-slate-400">Jikan API & AniList verified promotional visuals ({assets.length} HD Assets)</p>
+            <p className="text-xs text-slate-400">
+              Verified key visuals &amp; wallpapers powered by Jikan API &amp; AniList ({assets.length} HD Assets)
+            </p>
           </div>
         </div>
 
@@ -206,6 +203,13 @@ export function HDArtworkGallery({ anime }: HDArtworkGalleryProps) {
                   <Maximize2 className="w-4 h-4" />
                 </button>
                 <button
+                  onClick={() => handleCopyUrl(asset.url, asset.id)}
+                  className="p-3 rounded-full bg-slate-800/90 text-white hover:bg-slate-700 transition-colors border border-white/20"
+                  title="Copy URL"
+                >
+                  {copiedId === asset.id ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+                <button
                   onClick={() => handleDownload(asset)}
                   className="px-3.5 py-2.5 rounded-xl bg-[#FF2A5F] text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-[#FF2A5F]/40 hover:scale-105 transition-all"
                   title="Download Wallpaper"
@@ -249,12 +253,21 @@ export function HDArtworkGallery({ anime }: HDArtworkGalleryProps) {
             </div>
             <div className="flex items-center justify-between gap-4">
               <span className="text-xs text-slate-400 font-semibold">{lightboxImage.dimensions}</span>
-              <button
-                onClick={() => handleDownload(lightboxImage)}
-                className="px-5 py-2.5 rounded-xl bg-[#FF2A5F] text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#FF2A5F]/40"
-              >
-                <Download className="w-4 h-4" /> Download Original HD Wallpaper
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleCopyUrl(lightboxImage.url, lightboxImage.id)}
+                  className="px-4 py-2.5 rounded-xl glass-panel text-slate-300 hover:text-white border border-white/10 text-xs font-bold flex items-center gap-1.5"
+                >
+                  {copiedId === lightboxImage.id ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedId === lightboxImage.id ? 'Copied Link!' : 'Copy URL'}</span>
+                </button>
+                <button
+                  onClick={() => handleDownload(lightboxImage)}
+                  className="px-5 py-2.5 rounded-xl bg-[#FF2A5F] text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#FF2A5F]/40"
+                >
+                  <Download className="w-4 h-4" /> Download Original HD Artwork
+                </button>
+              </div>
             </div>
           </div>
         </Modal>

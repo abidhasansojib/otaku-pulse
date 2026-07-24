@@ -318,6 +318,55 @@ export async function getAnimeById(id: number | string): Promise<AnimeItem | nul
   return null;
 }
 
+export interface AnimePicture {
+  jpg: { large_image_url: string; image_url: string };
+  webp: { large_image_url: string; image_url: string };
+}
+
+// Fetch Official Promotional Visuals & Pictures for a specific anime from Jikan + AniList
+export async function getAnimePictures(id: number | string): Promise<string[]> {
+  const pictures: string[] = [];
+
+  // 1. Fetch from AniList for high-res banner & cover
+  try {
+    const aniListAnime = await getAnimeByIdAniList(id);
+    if (aniListAnime) {
+      if (aniListAnime.banner_url && !aniListAnime.banner_url.includes('placeholder')) {
+        pictures.push(aniListAnime.banner_url);
+      }
+      if (aniListAnime.images?.webp?.large_image_url) {
+        pictures.push(aniListAnime.images.webp.large_image_url);
+      }
+      if (aniListAnime.images?.jpg?.large_image_url) {
+        pictures.push(aniListAnime.images.jpg.large_image_url);
+      }
+      if (aniListAnime.trailer?.images?.maximum_image_url) {
+        pictures.push(aniListAnime.trailer.images.maximum_image_url);
+      }
+    }
+  } catch (e) {
+    // Silent
+  }
+
+  // 2. Fetch from Jikan API /anime/{id}/pictures
+  try {
+    const url = `${BASE_URL}/anime/${id}/pictures`;
+    const res = await rateLimitedFetch<JikanResponse<AnimePicture[]>>(url);
+    if (res?.data && Array.isArray(res.data)) {
+      res.data.forEach((pic) => {
+        const imgUrl = pic.webp?.large_image_url || pic.jpg?.large_image_url || pic.webp?.image_url || pic.jpg?.image_url;
+        if (imgUrl) pictures.push(imgUrl);
+      });
+    }
+  } catch (e) {
+    // Silent
+  }
+
+  // Deduplicate and filter out placeholders
+  const unique = Array.from(new Set(pictures)).filter((url) => url && !url.includes('placeholder'));
+  return unique;
+}
+
 // Search & Multi-Filter Anime (AniList + Jikan Multi-API with robust genre filtering)
 // Search & Multi-Filter Anime (Title & Genre dual-search with Title Priority)
 export async function searchAnime(filters: Partial<AnimeFilterState>, page = 1, limit = 24): Promise<JikanResponse<AnimeItem[]>> {
